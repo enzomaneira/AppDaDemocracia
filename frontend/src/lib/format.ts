@@ -42,7 +42,10 @@ export const VOTE_LABEL: Record<VoteChoice, string> = {
   abstencao: "Abstenção",
   obstrucao: "Obstrução",
   ausente: "Ausente",
-  art17: "Art. 17 (presidência)",
+  art17: "Presidindo a sessão",
+  secreto: "Voto secreto",
+  presente: "Presente, não votou",
+  justificada: "Ausência justificada",
 };
 
 export const houseLabel = (h: string) => (h === "senado" ? "Senado" : "Câmara");

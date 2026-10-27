@@ -98,3 +98,30 @@ async def test_compute_all_is_idempotent(db, seed):
 
     count = (await db.execute(select(func.count()).select_from(PoliticianStats))).scalar()
     assert count == 3
+
+
+async def test_senado_justified_absence_and_secret_vote(db, seed):
+    from datetime import UTC, datetime
+
+    from app.models import Attendance, AttendanceStatus, Session, Vote, VoteChoice, VoteRecord
+
+    carla = seed["c"]
+    when = datetime(2026, 5, 5, 15, tzinfo=UTC)
+    for i, status in enumerate(["presente", "justificada", "ausente", "presente"]):
+        s = Session(house=House.senado, external_id=f"ss{i}", is_deliberative=True, starts_at=when)
+        db.add(s)
+        await db.flush()
+        db.add(Attendance(session_id=s.id, politician_id=carla.id,
+                          status=AttendanceStatus(status)))  # fmt: skip
+    for i, choice in enumerate(["secreto", "presente", "justificada", "sim"]):
+        v = Vote(house=House.senado, external_id=f"sv{i}", voted_at=when)
+        db.add(v)
+        await db.flush()
+        db.add(VoteRecord(vote_id=v.id, politician_id=carla.id, choice=VoteChoice(choice)))
+    await db.commit()
+    await compute_all(db, parse_period("2026", 57))
+    st = await db.get(PoliticianStats, (carla.id, "2026"))
+    assert (st.sessions_total, st.sessions_present, st.sessions_justified) == (4, 2, 1)
+    assert float(st.attendance_rate) == 50.0
+    # voto secreto e "sim" contam; presente sem voto e ausência justificada, não
+    assert (st.votes_participated, st.votes_total) == (2, 4)

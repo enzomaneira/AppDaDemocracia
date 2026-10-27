@@ -7,6 +7,15 @@ import { ErrorBox, Loading } from "../components/States";
 import { VoteBadge } from "../components/VoteBadge";
 import { billLabel, formatDateTime, houseLabel, VOTE_LABEL } from "../lib/format";
 
+const BASE: VoteChoice[] = ["sim", "nao", "abstencao", "obstrucao", "ausente"];
+// Estados que só aparecem no Senado (comparecimento vem no registro de cada votação).
+const EXTRA: VoteChoice[] = ["secreto", "presente", "justificada", "art17"];
+
+/** Categorias do placar: as básicas sempre; as do Senado só quando houver. */
+export function placar(tally: Record<string, number>): VoteChoice[] {
+  return [...BASE, ...EXTRA.filter((c) => (tally[c] ?? 0) > 0)];
+}
+
 export default function Vote() {
   const { id = "" } = useParams();
   const { data: v, isLoading, error } = useVote(id);
@@ -51,7 +60,7 @@ export default function Vote() {
       <section className="card" aria-label="Placar">
         <h2 className="mb-3 font-semibold">Placar</h2>
         <dl className="grid grid-cols-3 gap-2 text-center sm:grid-cols-5">
-          {(["sim", "nao", "abstencao", "obstrucao", "ausente"] as VoteChoice[]).map((c) => (
+          {placar(tally).map((c) => (
             <div key={c} className="flex flex-col items-center gap-1">
               <dt>
                 <VoteBadge choice={c} size="sm" />

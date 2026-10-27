@@ -17,6 +17,7 @@ from sqlalchemy import and_, case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
+    PARTICIPATED_CHOICES,
     Attendance,
     AttendanceStatus,
     AuthorRole,
@@ -28,7 +29,6 @@ from app.models import (
     PoliticianStats,
     Session,
     Vote,
-    VoteChoice,
     VoteRecord,
 )
 
@@ -36,8 +36,8 @@ from app.models import (
 LEGISLATURE_57_START_YEAR = 2023
 
 # Tipos que contam como "proposição apresentada": projetos de lei, de lei complementar,
-# de emenda à Constituição, de decreto legislativo e de resolução.
-STATS_BILL_TYPES = ("PL", "PLP", "PEC", "PDL", "PRC")
+# de emenda à Constituição, de decreto legislativo e de resolução (PRC: Câmara; PRS: Senado).
+STATS_BILL_TYPES = ("PL", "PLP", "PEC", "PDL", "PRC", "PRS")
 
 
 @dataclass(frozen=True)
@@ -123,7 +123,7 @@ async def compute_all(db: AsyncSession, period: Period) -> int:
         select(
             VoteRecord.politician_id,
             func.count().label("total"),
-            func.sum(case((VoteRecord.choice != VoteChoice.ausente, 1), else_=0)).label("part"),
+            func.sum(case((VoteRecord.choice.in_(PARTICIPATED_CHOICES), 1), else_=0)).label("part"),
         )
         .join(Vote, Vote.id == VoteRecord.vote_id)
         .where(in_period_vote)

@@ -1,31 +1,49 @@
 """Senado Federal · Dados Abertos (XML por padrão; JSON via header Accept).
 
-Docs: https://legis.senado.leg.br/dadosabertos/docs/
-Os formatos abaixo devem ser conferidos na documentação oficial antes de produção
-(questão em aberto do projeto); o parsing é defensivo para tolerar campos ausentes.
+Docs: https://legis.senado.leg.br/dadosabertos/docs/ (spec em /v3/api-docs).
+O parsing é defensivo para tolerar campos ausentes.
+
+O Senado não publica presença por sessão: o comparecimento de cada senador vem no
+registro de cada votação nominal (siglaVotoParlamentar), com os 81 senadores listados.
 """
 
 from __future__ import annotations
 
 import csv
 import io
+import re
 from datetime import date
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.news_matching import normalize
 from ingestion.http import HttpClient
 
+# siglaVotoParlamentar (normalizada) → escolha interna. Códigos fora da tabela são ignorados
+# (ex.: "NA", "dispositivo não citado"): não viram voto nem falta.
 VOTE_MAP = {
     "sim": "sim",
     "nao": "nao",
-    "não": "nao",
     "abstencao": "abstencao",
-    "abstenção": "abstencao",
     "obstrucao": "obstrucao",
-    "p-ob": "obstrucao",
-    "ap": "ausente",
-    "ns": "ausente",
+    "p-od": "obstrucao",  # presente, obstrução declarada
+    "votou": "secreto",  # escrutínio secreto: participou, voto não é público
+    "p-nrv": "presente",  # presente, não registrou voto
+    "presidente (art. 51 risf)": "art17",  # presidindo a sessão
+    # Ausências justificadas
+    "ap": "justificada",  # atividade parlamentar
+    "mis": "justificada",  # missão da Casa no país/exterior
+    "ls": "justificada",  # licença saúde
+    "lp": "justificada",  # licença particular
+    "lg": "justificada",  # licença gestante
+    "la": "justificada",  # licença
+    "lap": "justificada",  # licença para atividade parlamentar
+    "rep": "justificada",  # representação da Casa
+    # Falta
+    "ncom": "ausente",  # não compareceu
 }
+
+PRESENT = {"sim", "nao", "abstencao", "obstrucao", "secreto", "presente", "art17"}
 
 
 def as_list(value: Any) -> list:
@@ -49,6 +67,14 @@ class SenadoSource:
     async def votacoes(self, start: date, end: date) -> list[dict]:
         data = await self.client.get_json(
             "/votacao", {"dataInicio": start.isoformat(), "dataFim": end.isoformat()}
+        )
+        return as_list(data)
+
+    async def processos_autor(self, codigo: str, start: date) -> list[dict]:
+        """Processos de autoria ou coautoria do senador apresentados desde `start`."""
+        data = await self.client.get_json(
+            "/processo",
+            {"codigoParlamentarAutor": codigo, "dataInicioApresentacao": start.isoformat()},
         )
         return as_list(data)
 
@@ -90,5 +116,35 @@ def parse_senador(item: dict) -> dict:
     }
 
 
-def map_vote(sigla: str | None) -> str:
-    return VOTE_MAP.get((sigla or "").strip().lower(), "ausente")
+def map_vote(sigla: str | None) -> str | None:
+    """Código do Senado → escolha interna; None para códigos que não indicam voto nem falta."""
+    return VOTE_MAP.get(normalize(sigla or ""))
+
+
+def session_attendance(choices: list[str]) -> str | None:
+    """Comparecimento do senador na sessão, a partir das suas escolhas nas votações dela.
+
+    Presente se esteve presente em alguma votação; senão, ausência justificada se houve
+    justificativa; senão, falta. Sem nenhum código conhecido, não conta.
+    """
+    if any(c in PRESENT for c in choices):
+        return "presente"
+    if "justificada" in choices:
+        return "justificada"
+    if "ausente" in choices:
+        return "ausente"
+    return None
+
+
+def parse_processo(item: dict) -> dict | None:
+    """Item de /processo → campos de Bill; None se a identificação não for 'TIPO N/AAAA'."""
+    m = re.match(r"\s*([A-Za-z]+)\s+(\d+)/(\d{4})", item.get("identificacao") or "")
+    if not m or not item.get("codigoMateria"):
+        return None
+    return {
+        "external_id": str(item["codigoMateria"]),
+        "type": m.group(1).upper(),
+        "number": int(m.group(2)),
+        "year": int(m.group(3)),
+        "official_summary": item.get("ementa"),
+    }

@@ -10,7 +10,18 @@ from datetime import UTC, date, datetime
 from sqlalchemy import func, select
 
 from app.db.session import SessionLocal
-from app.models import Bill, FeedType, House, Politician, Vote, VoteChoice, VoteRecord
+from app.models import (
+    Attendance,
+    AttendanceStatus,
+    Bill,
+    FeedType,
+    House,
+    Politician,
+    Session,
+    Vote,
+    VoteChoice,
+    VoteRecord,
+)
 from app.services.feed import add_event
 from app.services.news_matching import normalize
 from app.services.presenters import bill_url
@@ -87,8 +98,16 @@ async def _save_vote(
     bill: Bill | None,
     choices: dict[str, tuple[str, str | None]],
     pols: dict[str, Politician],
+    listed: set[str] | None = None,
 ) -> int:
-    """Grava votação + votos nominais. `choices`: external_id → (escolha, orientação)."""
+    """Grava votação + votos nominais. `choices`: external_id → (escolha, orientação).
+
+    `listed`: a lista completa de quem estava em exercício segundo a própria fonte (Senado:
+    os 81 senadores aparecem em toda votação). Com ela, ninguém é preenchido como ausente,
+    e registros de quem não está na lista (gravados por versões anteriores) são removidos.
+    Sem ela (Câmara, que só lista quem votou), quem estava em exercício e não votou fica
+    como ausente.
+    """
     counts = {"sim": 0, "nao": 0, "abstencao": 0}
     for choice, _ in choices.values():
         if choice in counts:
@@ -107,10 +126,11 @@ async def _save_vote(
             "abstention_count": counts["abstencao"],
         },
     )
-    # Quem estava em exercício na data e não aparece na lista nominal fica como ausente.
-    for ext, p in pols.items():
-        if ext not in choices and in_exercise(p, voted_at):
-            choices[ext] = ("ausente", None)
+    if listed is None:
+        # Quem estava em exercício na data e não aparece na lista nominal fica como ausente.
+        for ext, p in pols.items():
+            if ext not in choices and in_exercise(p, voted_at):
+                choices[ext] = ("ausente", None)
 
     existing = {
         r.politician_id: r
@@ -118,6 +138,12 @@ async def _save_vote(
             await db.execute(select(VoteRecord).where(VoteRecord.vote_id == vote.id))
         ).scalars()
     }
+    if listed is not None:
+        keep = {pols[e].id for e in choices if e in pols}
+        for pid, rec in list(existing.items()):
+            if pid not in keep:
+                await db.delete(rec)
+                del existing[pid]
     title = (bill.official_summary if bill else None) or description or "Votação"
     to_feed = feed_worthy(voted_at)
     n = 0
@@ -230,20 +256,31 @@ async def sync_senado(api: sen.SenadoSource) -> None:
         votacoes = []
         for start, end in await window(db, House.senado):
             votacoes += await api.votacoes(start, end)
+        # Comparecimento por sessão: escolhas de cada senador em todas as votações da sessão.
+        sessions: dict[str, dict] = {}
         for v in votacoes:
             votos = sen.as_list(v.get("votos"))
             if not votos:
                 continue
             ext = str(v.get("codigoSessaoVotacao") or v.get("codigoVotacao"))
-            choices = {
-                str(i.get("codigoParlamentar")): (
-                    sen.map_vote(
-                        i.get("siglaVotoParlamentar") or i.get("descricaoVotoParlamentar")
-                    ),
-                    None,
-                )
-                for i in votos
-            }
+            choices: dict[str, tuple[str, str | None]] = {}
+            listed: set[str] = set()
+            sess = sessions.setdefault(
+                str(v.get("codigoSessao")),
+                {"date": v.get("dataSessao"), "type": v.get("siglaTipoSessao"), "by": {}},
+            )
+            for i in votos:
+                code = str(i.get("codigoParlamentar"))
+                listed.add(code)
+                choice = sen.map_vote(i.get("siglaVotoParlamentar"))
+                if choice:
+                    choices[code] = (choice, None)
+                    entry = sess["by"].setdefault(code, {"choices": [], "why": None})
+                    entry["choices"].append(choice)
+                    if choice == "justificada":
+                        entry["why"] = i.get("descricaoVotoParlamentar") or i.get(
+                            "siglaVotoParlamentar"
+                        )
             bill = None
             if v.get("codigoMateria"):
                 code = str(v["codigoMateria"])
@@ -263,9 +300,54 @@ async def sync_senado(api: sen.SenadoSource) -> None:
             voted_at = parse_dt(v.get("dataSessao")) or datetime.now(UTC)
             run.items += await _save_vote(
                 db, House.senado, ext, voted_at, v.get("descricaoVotacao"),
-                senado_result(v.get("resultadoVotacao")), bill, choices, pols,
+                senado_result(v.get("resultadoVotacao")), bill, choices, pols, listed,
             )  # fmt: skip
             await db.commit()
+        await _save_senado_attendance(db, sessions, pols)
+
+
+async def _save_senado_attendance(db, sessions: dict[str, dict], pols) -> None:
+    """Sessões com votação nominal viram sessões deliberativas com presença por senador."""
+    for code, info in sessions.items():
+        starts = parse_dt(info["date"])
+        if not starts:
+            continue
+        sess, _ = await upsert(
+            db,
+            Session,
+            {"house": House.senado, "external_id": code},
+            {
+                "type": info["type"],
+                "is_deliberative": True,
+                "starts_at": starts,
+                "title": f"Sessão deliberativa {info['type'] or ''}".strip(),
+            },
+        )
+        existing = {
+            a.politician_id: a
+            for a in (
+                await db.execute(select(Attendance).where(Attendance.session_id == sess.id))
+            ).scalars()
+        }
+        for ext, entry in info["by"].items():
+            p = pols.get(ext)
+            status = sen.session_attendance(entry["choices"])
+            if not p or not status:
+                continue
+            why = entry["why"] if status == "justificada" else None
+            a = existing.get(p.id)
+            if a is None:
+                db.add(
+                    Attendance(
+                        session_id=sess.id,
+                        politician_id=p.id,
+                        status=AttendanceStatus(status),
+                        justification=why,
+                    )
+                )
+            else:
+                a.status, a.justification = AttendanceStatus(status), why
+        await db.commit()
 
 
 def _int(value) -> int | None:

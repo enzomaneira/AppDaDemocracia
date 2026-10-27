@@ -25,3 +25,16 @@ describe("StatTile", () => {
     expect(screen.getByText(/abaixo da média da casa/)).toBeInTheDocument();
   });
 });
+
+describe("VoteBadge · Senado", () => {
+  it.each([
+    ["secreto", "Voto secreto"],
+    ["presente", "Presente, não votou"],
+    ["justificada", "Ausência justificada"],
+    ["art17", "Presidindo a sessão"],
+  ] as const)("nunca mostra %s como Ausente", (choice, label) => {
+    render(<VoteBadge choice={choice} />);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText("Ausente")).not.toBeInTheDocument();
+  });
+});

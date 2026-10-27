@@ -1,5 +1,6 @@
 from app.models.news import FeedEvent, FeedType, IngestionRun, NewsArticle, NewsMention
 from app.models.politics import (
+    PARTICIPATED_CHOICES,
     AgendaEvent,
     Attendance,
     AttendanceStatus,
@@ -40,6 +41,7 @@ __all__ = [
     "Session",
     "User",
     "Vote",
+    "PARTICIPATED_CHOICES",
     "VoteChoice",
     "VoteRecord",
 ]

@@ -1,7 +1,16 @@
 // Espelha os schemas da API (backend/app/schemas). Documentação completa em /docs.
 
 export type House = "camara" | "senado";
-export type VoteChoice = "sim" | "nao" | "abstencao" | "obstrucao" | "ausente" | "art17";
+export type VoteChoice =
+  | "sim"
+  | "nao"
+  | "abstencao"
+  | "obstrucao"
+  | "ausente"
+  | "art17"
+  | "secreto"
+  | "presente"
+  | "justificada";
 export type FeedType = "vote" | "agenda" | "news" | "bill";
 
 export interface Page<T> {

@@ -47,8 +47,14 @@ def test_vote_maps():
     assert camara.map_vote("Não") == "nao"
     assert camara.map_vote("Artigo 17") == "art17"
     assert camara.map_vote(None) == "ausente"
-    assert senado.map_vote("Sim") == "sim"
-    assert senado.map_vote("AP") == "ausente"
+    # Senado: comparecimento vem no próprio registro de votação
+    assert senado.map_vote("Votou") == "secreto"
+    assert senado.map_vote("P-NRV") == "presente"
+    assert senado.map_vote("Presidente (art. 51 RISF)") == "art17"
+    for justificada in ("AP", "MIS", "LS", "LP"):
+        assert senado.map_vote(justificada) == "justificada"
+    assert senado.map_vote("NCom") == "ausente"
+    assert senado.map_vote("NA") is None  # "dispositivo não citado": não conta
 
 
 def test_plenary_deliberative():
@@ -269,3 +275,56 @@ async def test_expense_year_replace_is_idempotent(db, seed):
         assert await _camara_year(db, FakeApi(), pols, 2026) == 3
         # o lançamento do seed (1000.50, 2026) foi substituído pelo conteúdo do arquivo
         assert (await db.execute(total)).scalar() == Decimal("160.50")
+
+
+def test_senado_session_attendance():
+    from ingestion.sources.senado import session_attendance
+
+    assert session_attendance(["secreto", "justificada"]) == "presente"  # presente em uma
+    assert session_attendance(["presente"]) == "presente"
+    assert session_attendance(["justificada", "justificada"]) == "justificada"
+    assert session_attendance(["ausente", "justificada"]) == "justificada"
+    assert session_attendance(["ausente"]) == "ausente"
+    assert session_attendance([]) is None
+
+
+def test_parse_processo():
+    from ingestion.sources.senado import parse_processo
+
+    assert parse_processo(
+        {"identificacao": "PL 2036/2023", "codigoMateria": 157013, "ementa": "Segurança escolar"}
+    ) == {
+        "external_id": "157013",
+        "type": "PL",
+        "number": 2036,
+        "year": 2023,
+        "official_summary": "Segurança escolar",
+    }
+    assert parse_processo({"identificacao": "RQS 41/2023", "codigoMateria": 1})["type"] == "RQS"
+    assert parse_processo({"identificacao": "Ofício", "codigoMateria": 1}) is None
+
+
+async def test_senado_roster_is_authoritative(db, seed):
+    """No Senado, quem não está na lista da votação não estava em exercício: não é falta."""
+    from datetime import UTC, datetime
+
+    from sqlalchemy import select
+
+    from app.models import House, Politician, Vote, VoteRecord
+    from ingestion.jobs.common import politician_index
+    from ingestion.jobs.sync_votes import _save_vote
+
+    db.add(Politician(house=House.senado, external_id="77", civil_name="Suplente",
+                      parliamentary_name="Suplente", slug="suplente-mg", uf="MG"))  # fmt: skip
+    await db.commit()
+    pols = await politician_index(db, House.senado)
+    when = datetime(2026, 5, 5, tzinfo=UTC)
+    args = (db, House.senado, "sv1", when, "Votação", "Aprovada", None)
+
+    # Versão antiga preenchia o suplente como ausente; a nova remove esse registro.
+    await _save_vote(*args, {"9": ("sim", None), "77": ("ausente", None)}, pols)
+    await _save_vote(*args, {"9": ("sim", None)}, pols, {"9"})
+    await db.commit()
+    q = select(VoteRecord).join(Vote).where(Vote.external_id == "sv1")
+    recs = (await db.execute(q)).scalars().all()
+    assert [(r.politician_id, r.choice.value) for r in recs] == [(pols["9"].id, "sim")]

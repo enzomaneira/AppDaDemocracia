@@ -37,7 +37,8 @@ async def news(
 async def compare(db: DB, a: str, b: str, period: str | None = None) -> CompareOut:
     pa, pb = await get_by_slug(db, a), await get_by_slug(db, b)
     ra, rb = aliased(VoteRecord), aliased(VoteRecord)
-    absent = VoteChoice.ausente
+    # Só votos públicos se comparam (voto secreto, presença e ausências ficam de fora).
+    public = (VoteChoice.sim, VoteChoice.nao, VoteChoice.abstencao, VoteChoice.obstrucao)
     q = (
         select(func.count(), func.sum(case((ra.choice != rb.choice, 1), else_=0)))
         .select_from(ra)
@@ -45,8 +46,8 @@ async def compare(db: DB, a: str, b: str, period: str | None = None) -> CompareO
         .where(
             ra.politician_id == pa.id,
             rb.politician_id == pb.id,
-            ra.choice != absent,
-            rb.choice != absent,
+            ra.choice.in_(public),
+            rb.choice.in_(public),
         )
     )
     common, divergent = (await db.execute(q)).one()

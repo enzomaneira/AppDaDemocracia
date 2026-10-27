@@ -16,14 +16,25 @@ export function HowWeCalculate() {
         </p>
         <p>
           Ausências justificadas (licença, missão oficial etc.) aparecem separadas e nunca são somadas às faltas, quando
-          a fonte oficial informa a justificativa. Sessões não deliberativas e solenes não entram no cálculo.
+          a fonte oficial informa a justificativa. Sessões não deliberativas e solenes não entram no cálculo. Só conta
+          como falta quem estava em exercício na data: suplências, licenças e vacâncias seguem o histórico oficial.
+        </p>
+        <p>
+          <strong>Câmara:</strong> lista de presença de cada sessão deliberativa do Plenário.
+        </p>
+        <p>
+          <strong>Senado:</strong> o Senado não publica presença por sessão; o comparecimento de cada senador vem no
+          registro das votações nominais. Contam as sessões com ao menos uma votação nominal. O senador está presente se
+          compareceu a alguma votação da sessão; a ausência é justificada quando o registro oficial indica atividade
+          parlamentar, missão da Casa ou licença; é falta quando o registro indica “não compareceu”.
         </p>
       </Section>
       <Section title="Votações nominais participadas">
         <p>
-          Número de votações nominais do Plenário em que o parlamentar registrou voto (Sim, Não, Abstenção ou
-          Obstrução). Votações simbólicas não têm registro individual e não entram na conta. Quem estava em exercício e
-          não registrou voto aparece como “Ausente” naquela votação.
+          Número de votações nominais do Plenário em que o parlamentar votou: Sim, Não, Abstenção, Obstrução, voto
+          secreto (Senado) ou presidindo a sessão. Votações simbólicas não têm registro individual e não entram na conta.
+          Estar presente sem votar ou ausente com justificativa não conta como participação, mas aparece com esse nome,
+          nunca como “Ausente”. Quem estava em exercício e não registrou voto aparece como “Ausente” naquela votação.
         </p>
       </Section>
       <Section title="Orientação do partido">
@@ -33,7 +44,12 @@ export function HowWeCalculate() {
         </p>
       </Section>
       <Section title="Proposições">
-        <p>Proposições em que o parlamentar consta como autor, conforme o cadastro oficial de autoria.</p>
+        <p>
+          Projetos em que o parlamentar consta como autor ou coautor no cadastro oficial: projetos de lei (PL), de lei
+          complementar (PLP), de emenda à Constituição (PEC), de decreto legislativo (PDL) e de resolução (PRC na Câmara,
+          PRS no Senado). Requerimentos, pareceres e documentos de tramitação não entram. Uma PEC exige ao menos 1/3 da
+          casa como coautores, por isso cada PEC conta para todos os que a assinaram.
+        </p>
       </Section>
       <Section title="Gastos da cota parlamentar">
         <p>

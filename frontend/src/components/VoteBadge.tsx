@@ -8,6 +8,9 @@ const STYLE: Record<VoteChoice, { cls: string; icon: string }> = {
   obstrucao: { cls: "bg-voto-obstrucao/12 text-voto-obstrucao ring-voto-obstrucao/40", icon: "⊘" },
   ausente: { cls: "bg-ausente/12 text-ausente ring-ausente/40", icon: "–" },
   art17: { cls: "bg-ausente/12 text-ausente ring-ausente/40", icon: "§" },
+  secreto: { cls: "bg-marca/10 text-marca ring-marca/40", icon: "◼" },
+  presente: { cls: "bg-ausente/12 text-ausente ring-ausente/40", icon: "●" },
+  justificada: { cls: "bg-ausente/12 text-ausente ring-ausente/40", icon: "ⓘ" },
 };
 
 /** Voto com ícone + texto: a cor nunca é o único sinal (WCAG). */

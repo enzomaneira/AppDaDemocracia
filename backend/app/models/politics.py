@@ -44,7 +44,22 @@ class VoteChoice(enum.StrEnum):
     abstencao = "abstencao"
     obstrucao = "obstrucao"
     ausente = "ausente"
-    art17 = "art17"
+    art17 = "art17"  # presidindo a sessão (Câmara: art. 17; Senado: art. 51)
+    # Senado: o registro nominal traz o comparecimento de cada senador.
+    secreto = "secreto"  # votou em escrutínio secreto
+    presente = "presente"  # presente, não registrou voto
+    justificada = "justificada"  # atividade parlamentar, missão oficial ou licença
+
+
+# Escolhas que contam como "participou da votação".
+PARTICIPATED_CHOICES = (
+    VoteChoice.sim,
+    VoteChoice.nao,
+    VoteChoice.abstencao,
+    VoteChoice.obstrucao,
+    VoteChoice.secreto,
+    VoteChoice.art17,
+)
 
 
 def _enum(e: type[enum.Enum], name: str) -> Enum:

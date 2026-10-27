@@ -1,8 +1,8 @@
-"""4 · Proposições de autoria (Câmara): só projetos, gravados em lote.
+"""4 · Proposições de autoria (Câmara e Senado): só projetos, gravados em lote.
 
-A API chama de "proposição" também requerimentos, pareceres e documentos de tramitação
+As APIs chamam de "proposição" também requerimentos, pareceres e documentos de tramitação
 (um deputado chega a ter dezenas de milhares). Para a métrica "proposições apresentadas"
-contam só os projetos (STATS_BILL_TYPES), filtrados já na consulta à API.
+contam só os projetos (STATS_BILL_TYPES), de autoria ou coautoria.
 """
 
 from __future__ import annotations
@@ -10,17 +10,19 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models import AuthorRole, Bill, BillAuthor, FeedType, House
+from app.models import AuthorRole, Bill, BillAuthor, FeedType, House, Politician
 from app.services.feed import add_event
 from app.services.presenters import bill_url
 from app.services.stats import STATS_BILL_TYPES, legislature_start_year
 from ingestion.jobs.common import politician_index, tracked
+from ingestion.sources import senado as sen
 from ingestion.sources.camara import CamaraSource
 
 log = logging.getLogger("ingestion.bills")
@@ -32,87 +34,144 @@ def bill_label(bill: Bill) -> str:
     return f"{bill.type} {bill.number}/{bill.year}" if bill.number and bill.year else bill.type
 
 
-async def sync_camara(api: CamaraSource) -> None:
+async def _window(db, house: House) -> tuple[date, bool, dict[str, Politician]]:
+    """(início, gera feed?, parlamentares a consultar) para a casa.
+
+    A lista de proposições não traz uma data confiável para continuar de onde parou; sem
+    histórico na casa, carrega a legislatura inteira.
+    """
     s = get_settings()
     today = datetime.now(UTC).date()
-    async with tracked("sync_bills", "camara") as run, SessionLocal() as db:
-        has_bills = (await db.execute(select(BillAuthor.bill_id).limit(1))).first() is not None
-        # A lista de proposições não traz data; sem histórico, carrega a legislatura inteira.
-        start = s.sync_since or (
-            today - timedelta(days=s.sync_days_back)
-            if has_bills
-            else date(legislature_start_year(s.legislature), 2, 1)
+    has_bills = (
+        await db.execute(
+            select(BillAuthor.bill_id)
+            .join(Politician, Politician.id == BillAuthor.politician_id)
+            .where(Politician.house == house)
+            .limit(1)
         )
-        # Numa carga histórica, proposições antigas não viram item de feed.
-        to_feed = start >= today - timedelta(days=s.feed_max_age_days)
-        pols = await politician_index(db, House.camara)
-        if has_bills and not s.sync_since:
-            pols = {k: p for k, p in pols.items() if p.in_office}
+    ).first() is not None
+    start = s.sync_since or (
+        today - timedelta(days=s.sync_days_back)
+        if has_bills
+        else date(legislature_start_year(s.legislature), 2, 1)
+    )
+    # Numa carga histórica, proposições antigas não viram item de feed.
+    to_feed = start >= today - timedelta(days=s.feed_max_age_days)
+    pols = await politician_index(db, house)
+    if has_bills and not s.sync_since:
+        pols = {k: p for k, p in pols.items() if p.in_office}
+    return start, to_feed, pols
 
-        async def fetch(ext: str):
-            try:
-                return ext, [b async for b in api.proposicoes_autor(ext, start, STATS_BILL_TYPES)]
-            except Exception as err:  # noqa: BLE001 — um deputado com erro não derruba o job
-                log.warning("proposições do deputado %s ignoradas: %s", ext, err)
-                return ext, []
 
-        results = await asyncio.gather(*(fetch(e) for e in pols))
+async def _fetch_all(
+    pols: dict[str, Politician], fetch: Callable[[str], Awaitable[list[dict]]]
+) -> list[tuple[str, list[dict]]]:
+    async def one(ext: str):
+        try:
+            return ext, await fetch(ext)
+        except Exception as err:  # noqa: BLE001 — um parlamentar com erro não derruba o job
+            log.warning("proposições de %s ignoradas: %s", ext, err)
+            return ext, []
 
-        # Gravação em lote: o que já existe é carregado uma vez, em vez de 2 consultas por item.
-        bill_ids: dict[str, uuid.UUID] = dict(
-            (await db.execute(select(Bill.external_id, Bill.id).where(Bill.house == House.camara)))
-            .tuples()
-            .all()
-        )
-        links = set(
-            (
-                await db.execute(
-                    select(BillAuthor.bill_id, BillAuthor.politician_id).where(
-                        BillAuthor.role == AuthorRole.autor
-                    )
+    return await asyncio.gather(*(one(e) for e in pols))
+
+
+async def _save_bills(
+    db, house: House, pols, results: list[tuple[str, list[dict]]], to_feed: bool
+) -> int:
+    """Grava em lote: o que já existe é carregado uma vez, em vez de 2 consultas por item.
+
+    Cada item: {"external_id", "type", "number", "year", "official_summary"}.
+    """
+    bill_ids: dict[str, uuid.UUID] = dict(
+        (await db.execute(select(Bill.external_id, Bill.id).where(Bill.house == house)))
+        .tuples()
+        .all()
+    )
+    links = set(
+        (
+            await db.execute(
+                select(BillAuthor.bill_id, BillAuthor.politician_id).where(
+                    BillAuthor.role == AuthorRole.autor
                 )
             )
-            .tuples()
-            .all()
         )
-        pending = 0
-        for ext, props in results:
-            p = pols[ext]
-            for b in props:
-                bext = str(b["id"])
-                bill_id = bill_ids.get(bext)
-                if bill_id is None:
-                    bill = Bill(
-                        id=uuid.uuid4(),
-                        house=House.camara,
-                        external_id=bext,
-                        type=b.get("siglaTipo") or "PROP",
-                        number=b.get("numero"),
-                        year=b.get("ano"),
-                        official_summary=b.get("ementa"),
-                        url=bill_url(House.camara, bext),
-                    )
-                    db.add(bill)
-                    bill_id = bill_ids[bext] = bill.id
-                    pending += 1
-                if (bill_id, p.id) in links:
-                    continue
-                links.add((bill_id, p.id))
-                db.add(BillAuthor(bill_id=bill_id, politician_id=p.id, role=AuthorRole.autor))
+        .tuples()
+        .all()
+    )
+    pending = n = 0
+    for ext, items in results:
+        p = pols[ext]
+        for it in items:
+            if it["type"] not in STATS_BILL_TYPES:
+                continue
+            bext = it["external_id"]
+            bill_id = bill_ids.get(bext)
+            if bill_id is None:
+                bill = Bill(
+                    id=uuid.uuid4(),
+                    house=house,
+                    url=bill_url(house, bext),
+                    **it,
+                )
+                db.add(bill)
+                bill_id = bill_ids[bext] = bill.id
                 pending += 1
-                run.items += 1
-                if to_feed:
-                    label = f"{b.get('siglaTipo')} {b.get('numero')}/{b.get('ano')}"
-                    await add_event(
-                        db, p.id, FeedType.bill, bill_id, datetime.now(UTC),
-                        {"title": (b.get("ementa") or "")[:300], "bill": label,
-                         "url": bill_url(House.camara, bext)},
-                    )  # fmt: skip
-                if pending >= COMMIT_EVERY:
-                    await db.commit()
-                    pending = 0
-        await db.commit()
+            if (bill_id, p.id) in links:
+                continue
+            links.add((bill_id, p.id))
+            db.add(BillAuthor(bill_id=bill_id, politician_id=p.id, role=AuthorRole.autor))
+            pending += 1
+            n += 1
+            if to_feed:
+                await add_event(
+                    db, p.id, FeedType.bill, bill_id, datetime.now(UTC),
+                    {"title": (it["official_summary"] or "")[:300],
+                     "bill": f"{it['type']} {it['number']}/{it['year']}",
+                     "url": bill_url(house, bext)},
+                )  # fmt: skip
+            if pending >= COMMIT_EVERY:
+                await db.commit()
+                pending = 0
+    await db.commit()
+    return n
 
 
-async def run(camara: CamaraSource) -> None:
+async def sync_camara(api: CamaraSource) -> None:
+    async with tracked("sync_bills", "camara") as run, SessionLocal() as db:
+        start, to_feed, pols = await _window(db, House.camara)
+
+        async def fetch(ext: str) -> list[dict]:
+            # Filtra os tipos já na API: sem isso vêm dezenas de milhares de requerimentos.
+            return [
+                {
+                    "external_id": str(b["id"]),
+                    "type": b.get("siglaTipo") or "PROP",
+                    "number": b.get("numero"),
+                    "year": b.get("ano"),
+                    "official_summary": b.get("ementa"),
+                }
+                async for b in api.proposicoes_autor(ext, start, STATS_BILL_TYPES)
+            ]
+
+        results = await _fetch_all(pols, fetch)
+        run.items += await _save_bills(db, House.camara, pols, results, to_feed)
+
+
+async def sync_senado(api: sen.SenadoSource) -> None:
+    async with tracked("sync_bills", "senado") as run, SessionLocal() as db:
+        start, to_feed, pols = await _window(db, House.senado)
+
+        async def fetch(ext: str) -> list[dict]:
+            # /processo devolve tudo de uma vez; o tipo sai da identificação ("PL 2036/2023").
+            return [
+                it for it in map(sen.parse_processo, await api.processos_autor(ext, start)) if it
+            ]
+
+        results = await _fetch_all(pols, fetch)
+        run.items += await _save_bills(db, House.senado, pols, results, to_feed)
+
+
+async def run(camara: CamaraSource, senado: sen.SenadoSource) -> None:
     await sync_camara(camara)
+    await sync_senado(senado)

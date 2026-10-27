@@ -42,7 +42,7 @@ async def main(selected: list[str]) -> None:
         "politicians": lambda: sync_politicians.run(camara, senado),
         "votes": lambda: sync_votes.run(camara, senado),
         "agenda": lambda: sync_agenda.run(camara),
-        "bills": lambda: sync_bills.run(camara),
+        "bills": lambda: sync_bills.run(camara, senado),
         "expenses": lambda: sync_expenses.run(camara, senado),
         "news": sync_news.run,
         "stats": refresh_stats.run,
