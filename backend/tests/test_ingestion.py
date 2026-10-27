@@ -222,3 +222,50 @@ def test_sync_jobs_env(monkeypatch):
         text=True,
     )
     assert r.returncode != 0 and "nao-existe" in r.stderr
+
+
+def test_expense_keys_keep_repeated_source_ids():
+    from ingestion.jobs.sync_expenses import keyed_rows
+
+    rows = [
+        {"ideDocumento": "0", "numMes": "10", "vlrLiquido": "107.29"},
+        {"ideDocumento": "0", "numMes": "11", "vlrLiquido": "107.29"},
+        {"ideDocumento": "142935", "numMes": "3", "vlrLiquido": "500.68"},
+        {"ideDocumento": "142935", "numMes": "3", "vlrLiquido": "-32.86"},  # estorno
+        {"ideDocumento": "142935", "numMes": "3", "vlrLiquido": "-32.86"},  # linha idêntica
+    ]
+    keys = [k for k, _ in keyed_rows(rows, "camara", 2023)]
+    assert len(set(keys)) == 5  # nenhuma linha some
+    assert all(k.startswith("camara:2023:") for k in keys)
+    # Estável entre execuções (mesmo arquivo → mesmas chaves)
+    assert keys == [k for k, _ in keyed_rows(rows, "camara", 2023)]
+
+
+async def test_expense_year_replace_is_idempotent(db, seed):
+    from decimal import Decimal
+
+    from sqlalchemy import func, select
+
+    from app.models import Expense, House
+    from ingestion.jobs.common import politician_index
+    from ingestion.jobs.sync_expenses import _camara_year
+
+    rows = [
+        {"ideCadastro": "1", "ideDocumento": "0", "numMes": "1", "vlrLiquido": "100.00",
+         "txtDescricao": "TELEFONIA"},
+        {"ideCadastro": "1", "ideDocumento": "0", "numMes": "2", "vlrLiquido": "50.50",
+         "txtDescricao": "TELEFONIA"},
+        {"ideCadastro": "2", "ideDocumento": "9", "numMes": "1", "vlrLiquido": "10.00",
+         "txtDescricao": "TAXI"},
+    ]  # fmt: skip
+
+    class FakeApi:
+        async def ceap_csv(self, year):
+            return rows
+
+    pols = await politician_index(db, House.camara)
+    total = select(func.sum(Expense.amount)).where(Expense.year == 2026)
+    for _ in range(2):  # roda duas vezes: substitui, não duplica
+        assert await _camara_year(db, FakeApi(), pols, 2026) == 3
+        # o lançamento do seed (1000.50, 2026) foi substituído pelo conteúdo do arquivo
+        assert (await db.execute(total)).scalar() == Decimal("160.50")
