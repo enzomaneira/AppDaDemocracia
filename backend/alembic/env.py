@@ -15,9 +15,18 @@ if config.config_file_name:
 target_metadata = Base.metadata
 url = get_settings().database_url
 
+# Objetos só do Postgres criados à mão nas migrações (não existem nos modelos).
+MANUAL_OBJECTS = {"ix_politicians_name_trgm"}
+
+
+def include_object(obj, name, type_, reflected, compare_to) -> bool:
+    return name not in MANUAL_OBJECTS
+
 
 def run_migrations_offline() -> None:
-    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+    context.configure(
+        url=url, target_metadata=target_metadata, literal_binds=True, include_object=include_object
+    )
     with context.begin_transaction():
         context.run_migrations()
 
@@ -27,6 +36,7 @@ def _run(connection) -> None:
         connection=connection,
         target_metadata=target_metadata,
         render_as_batch=connection.dialect.name == "sqlite",
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
