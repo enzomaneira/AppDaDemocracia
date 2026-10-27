@@ -144,7 +144,12 @@ Pendências conhecidas:
   conferido na documentação oficial (questão em aberto do projeto). Hoje a presença da Câmara vem de
   `/eventos/{id}/deputados` nas sessões deliberativas do Plenário. Justificativas e a presença no
   Senado ainda não são importadas.
-- **Relatoria** de proposições e **agenda do Senado** ainda não são importadas.
+- **Senadores**: votos e cota já vêm do Senado, mas presença, proposições e agenda ainda não
+  são importadas (no perfil, essas métricas aparecem vazias).
+- **Relatoria**: os pareceres (PRL) da API da Câmara não são um sinal confiável de relatoria
+  (um deputado tem ~10 mil), então "relatadas" ainda não é calculado.
+- **Proposições apresentadas** contam só projetos (PL, PLP, PEC, PDL, PRC) em que o deputado é
+  autor ou coautor; requerimentos e documentos de tramitação ficam de fora.
 - **Login com Google no frontend**: falta o botão do Google Identity Services (o backend já aceita o ID token).
 - **P1/P2**: notificações push/e-mail, resumos por IA, tela de comparação, temas, cards de compartilhamento e painel admin com interface.
 - **Admin**: para promover um usuário, defina `role = 'admin'` direto no banco.
