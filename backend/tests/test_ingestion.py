@@ -1,3 +1,4 @@
+import itertools
 from decimal import Decimal
 
 from ingestion.jobs.common import slugify
@@ -95,3 +96,114 @@ def test_rss_keeps_only_short_snippet():
     assert item.url == "https://ex.com/a"
     assert item.snippet == "Resumo"
     assert item.source_name == "Agencia"
+
+
+def test_office_periods_from_historico():
+    hist = [
+        {"dataHora": "2023-02-01T00:00", "situacao": None},
+        {"dataHora": "2023-02-01T12:05", "situacao": "Exercício"},
+        {"dataHora": "2023-02-10T00:00", "situacao": "Exercício"},  # troca de partido
+        {"dataHora": "2024-03-01T00:00", "situacao": "Licença"},
+        {"dataHora": "2024-07-01T00:00", "situacao": "Exercício"},
+        {"dataHora": "2025-01-01T00:00", "situacao": "VACANCIA"},
+    ]
+    assert camara.parse_office_periods(hist) == [
+        ["2023-02-01", "2024-03-01"],
+        ["2024-07-01", "2025-01-01"],
+    ]
+    assert camara.parse_office_periods([]) == []
+
+
+def test_in_exercise_respects_periods():
+    from datetime import UTC, datetime
+
+    from app.models import Politician
+    from ingestion.jobs.common import in_exercise
+
+    p = Politician(in_office=True, office_periods=[["2023-02-01", "2024-03-01"]])
+    assert in_exercise(p, datetime(2023, 6, 1, tzinfo=UTC))
+    assert not in_exercise(p, datetime(2024, 3, 1, tzinfo=UTC))  # fim é exclusivo
+    suplente = Politician(in_office=True, office_periods=[["2025-05-10", None]])
+    assert not in_exercise(suplente, datetime(2024, 1, 1, tzinfo=UTC))
+    assert in_exercise(suplente, datetime(2026, 1, 1, tzinfo=UTC))
+    # Sem histórico (ex.: senadores): cai para a situação atual.
+    assert in_exercise(Politician(in_office=True, office_periods=None), datetime.now(UTC))
+
+
+def test_date_chunks_respect_three_months():
+    from datetime import date, timedelta
+
+    from ingestion.jobs.common import date_chunks
+
+    chunks = date_chunks(date(2023, 2, 1), date(2023, 12, 31))
+    assert chunks[0][0] == date(2023, 2, 1) and chunks[-1][1] == date(2023, 12, 31)
+    assert all((e - s) < timedelta(days=90) for s, e in chunks)
+    assert all(b[0] == a[1] + timedelta(days=1) for a, b in itertools.pairwise(chunks))
+    assert date_chunks(date(2026, 1, 2), date(2026, 1, 1)) == []
+
+
+def test_sync_start_continues_or_backfills(monkeypatch):
+    from datetime import UTC, date, datetime
+
+    from app.core.config import get_settings
+    from ingestion.jobs.common import sync_start
+
+    s = get_settings()
+    monkeypatch.setattr(s, "sync_since", None)
+    monkeypatch.setattr(s, "sync_days_back", 3)
+    # Banco vazio → início da legislatura (57ª: 01/02/2023)
+    assert sync_start(None) == date(2023, 2, 1)
+    # Continua do último item gravado, com folga — mesmo após semanas de recesso
+    assert sync_start(datetime(2026, 10, 15, 20, tzinfo=UTC)) == date(2026, 10, 12)
+    monkeypatch.setattr(s, "sync_since", date(2024, 1, 1))
+    assert sync_start(datetime(2026, 10, 15, tzinfo=UTC)) == date(2024, 1, 1)
+
+
+def test_backfill_does_not_flood_feed():
+    from datetime import UTC, datetime, timedelta
+
+    from ingestion.jobs.common import feed_worthy
+
+    assert feed_worthy(datetime.now(UTC) - timedelta(days=2))
+    assert not feed_worthy(datetime(2023, 5, 1, tzinfo=UTC))
+
+
+def test_run_daily_args():
+    from datetime import date
+
+    from ingestion.run_daily import parse_args
+
+    a = parse_args(["--since", "2023-02-01", "votes", "stats"])
+    assert a.since == date(2023, 2, 1) and a.jobs == ["votes", "stats"]
+    assert parse_args([]).jobs == []
+
+
+async def test_http_does_not_retry_404_but_retries_503(monkeypatch):
+    import httpx
+    import pytest
+
+    from ingestion.http import HttpClient
+
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if request.url.path == "/missing":
+            return httpx.Response(404)
+        return httpx.Response(503) if calls["n"] < 3 else httpx.Response(200, json={"ok": 1})
+
+    async def no_sleep(_):
+        return None
+
+    monkeypatch.setattr("ingestion.http.asyncio.sleep", no_sleep)
+    client = HttpClient("http://fonte.test")
+    client._client = httpx.AsyncClient(
+        base_url="http://fonte.test", transport=httpx.MockTransport(handler)
+    )
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.get("/missing")
+    assert calls["n"] == 1  # 404: sem nova tentativa
+    calls["n"] = 0
+    assert (await client.get_json("/flaky")) == {"ok": 1}
+    assert calls["n"] == 3  # 503, 503, 200
+    await client.aclose()

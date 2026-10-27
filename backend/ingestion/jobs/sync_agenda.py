@@ -7,16 +7,27 @@ do registro de frequência nas fontes oficiais (questão em aberto do projeto).
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import AgendaEvent, Attendance, AttendanceStatus, FeedType, House, Session
 from app.services.feed import add_event
-from ingestion.jobs.common import parse_dt, politician_index, tracked, upsert
-from ingestion.sources.camara import CamaraSource, is_plenary_deliberative
+from ingestion.jobs.common import (
+    date_chunks,
+    in_exercise,
+    parse_dt,
+    politician_index,
+    sync_start,
+    tracked,
+    upsert,
+)
+from ingestion.sources.camara import PLENARIO_ID, CamaraSource, is_plenary_deliberative
+
+log = logging.getLogger("ingestion.agenda")
 
 
 async def sync_agenda_camara(api: CamaraSource) -> None:
@@ -30,7 +41,11 @@ async def sync_agenda_camara(api: CamaraSource) -> None:
         pols = {k: p for k, p in (await politician_index(db, House.camara)).items() if p.in_office}
 
         async def fetch(ext: str):
-            return ext, [e async for e in api.deputado_eventos(ext, start, end)]
+            try:
+                return ext, [e async for e in api.deputado_eventos(ext, start, end)]
+            except Exception as err:  # noqa: BLE001
+                log.warning("agenda do deputado %s ignorada: %s", ext, err)
+                return ext, []
 
         results = await asyncio.gather(*(fetch(ext) for ext in pols))
         for ext, eventos in results:
@@ -65,16 +80,23 @@ async def sync_agenda_camara(api: CamaraSource) -> None:
 
 
 async def sync_attendance_camara(api: CamaraSource) -> None:
-    s = get_settings()
     today = datetime.now(UTC).date()
-    start = today - timedelta(days=s.sync_days_back)
     async with tracked("sync_attendance", "camara") as run, SessionLocal() as db:
         pols = await politician_index(db, House.camara)
-        in_office = {ext: p for ext, p in pols.items() if p.in_office}
-        async for e in api.eventos(start, today):
+        latest = (
+            await db.execute(
+                select(func.max(Session.starts_at)).where(Session.house == House.camara)
+            )
+        ).scalar()
+        eventos = []
+        for start, end in date_chunks(sync_start(latest), today):
+            eventos += [e async for e in api.eventos(start, end, id_orgao=PLENARIO_ID)]
+        for e in eventos:
             if not is_plenary_deliberative(e) or (e.get("situacao") or "") != "Encerrada":
                 continue
             starts = parse_dt(e.get("dataHoraInicio"))
+            if not starts:
+                continue
             sess, _ = await upsert(
                 db,
                 Session,
@@ -86,14 +108,20 @@ async def sync_attendance_camara(api: CamaraSource) -> None:
                     "title": e.get("descricao"),
                 },
             )
-            present = {str(d["id"]) for d in await api.evento_deputados(e["id"])}
+            try:
+                present = {str(d["id"]) for d in await api.evento_deputados(e["id"])}
+            except Exception as err:  # noqa: BLE001 — um evento quebrado não derruba o job
+                log.warning("presença do evento %s ignorada: %s", e["id"], err)
+                continue
             existing = {
                 a.politician_id: a
                 for a in (
                     await db.execute(select(Attendance).where(Attendance.session_id == sess.id))
                 ).scalars()
             }
-            for ext, p in in_office.items():
+            for ext, p in pols.items():
+                if ext not in present and not in_exercise(p, starts):
+                    continue  # não estava em exercício nessa data (suplência, licença…)
                 status = AttendanceStatus.presente if ext in present else AttendanceStatus.ausente
                 a = existing.get(p.id)
                 if a is None:

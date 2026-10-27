@@ -10,23 +10,26 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import House, Politician
 from ingestion.jobs.common import party_id, politician_index, tracked, unique_slug, upsert
-from ingestion.sources.camara import CamaraSource
+from ingestion.sources.camara import CamaraSource, parse_office_periods
 from ingestion.sources.senado import SenadoSource, parse_senador
 
 
 async def sync_camara(camara: CamaraSource) -> None:
     s = get_settings()
     async with tracked("sync_politicians", "camara") as run, SessionLocal() as db:
-        ids = []
+        ids: list[int] = []
         async for d in camara.deputados(s.legislature):
-            ids.append(d["id"])
+            # A lista da legislatura repete o deputado a cada mudança de partido/situação.
+            if d["id"] not in ids:
+                ids.append(d["id"])
             if s.sync_limit and len(ids) >= s.sync_limit:
                 break
         details = await asyncio.gather(*(camara.deputado(i) for i in ids))
+        historicos = await asyncio.gather(*(camara.historico(i) for i in ids))
         parties: dict = {}
         seen = []
         existing = await politician_index(db, House.camara)
-        for det in details:
+        for det, hist in zip(details, historicos, strict=True):
             st = det.get("ultimoStatus", {})
             ext = str(det["id"])
             name = st.get("nomeEleitoral") or st.get("nome") or det.get("nomeCivil")
@@ -40,6 +43,7 @@ async def sync_camara(camara: CamaraSource) -> None:
                 "email": (st.get("gabinete") or {}).get("email") or st.get("email"),
                 "social_links": det.get("redeSocial") or [],
                 "in_office": (st.get("situacao") or "Exercício") == "Exercício",
+                "office_periods": parse_office_periods(hist),
                 "legislature": st.get("idLegislatura") or s.legislature,
             }
             keys = {"house": House.camara, "external_id": ext}

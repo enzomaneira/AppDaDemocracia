@@ -7,15 +7,17 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import House, IngestionRun, Party, Politician
 from app.services.news_matching import normalize
+from app.services.stats import legislature_start_year
 
 log = logging.getLogger("ingestion")
 M = TypeVar("M")
@@ -102,6 +104,50 @@ async def politician_index(db: AsyncSession, house: House) -> dict[str, Politici
     """external_id → Politician de uma casa."""
     rows = (await db.execute(select(Politician).where(Politician.house == house))).scalars()
     return {p.external_id: p for p in rows}
+
+
+def sync_start(latest: datetime | None) -> date:
+    """Início da janela incremental de um job.
+
+    Continua de onde o banco parou (último item gravado, menos SYNC_DAYS_BACK de folga para
+    pegar correções da fonte). Banco vazio → carga desde o início da legislatura.
+    SYNC_SINCE (ou `run_daily --since`) força a data.
+    """
+    s = get_settings()
+    if s.sync_since:
+        return s.sync_since
+    if latest is None:
+        return date(legislature_start_year(s.legislature), 2, 1)
+    return min(latest.date(), datetime.now(UTC).date()) - timedelta(days=s.sync_days_back)
+
+
+def date_chunks(start: date, end: date, max_days: int = 90) -> list[tuple[date, date]]:
+    """Fatia [start, end] em blocos (a API da Câmara aceita no máximo 3 meses por consulta)."""
+    out = []
+    cur = start
+    while cur <= end:
+        stop = min(cur + timedelta(days=max_days - 1), end)
+        out.append((cur, stop))
+        cur = stop + timedelta(days=1)
+    return out
+
+
+def in_exercise(p: Politician, when: datetime) -> bool:
+    """O parlamentar estava em exercício nessa data?
+
+    Usa os períodos do histórico oficial quando existem (suplentes, licenças, vacâncias);
+    sem histórico, cai para a situação atual.
+    """
+    periods = p.office_periods or []
+    if not periods:
+        return p.in_office
+    day = when.date().isoformat()
+    return any(start <= day and (end is None or day < end) for start, end in periods)
+
+
+def feed_worthy(when: datetime) -> bool:
+    """Só eventos recentes viram item de feed; a carga histórica não inunda o feed."""
+    return when >= datetime.now(UTC) - timedelta(days=get_settings().feed_max_age_days)
 
 
 def parse_dt(value: str | None) -> datetime | None:

@@ -79,6 +79,8 @@ class Politician(Base):
     email: Mapped[str | None] = mapped_column(String(320))
     social_links: Mapped[list[str]] = mapped_column(JsonType, default=list)
     in_office: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Períodos em exercício [[início, fim|None], ...] (datas ISO), do histórico oficial.
+    office_periods: Mapped[list | None] = mapped_column(JsonType)
     legislature: Mapped[int | None] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(
         UTCDateTime, server_default=func.now(), onupdate=func.now()

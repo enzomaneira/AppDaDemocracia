@@ -3,22 +3,32 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
-from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import Bill, FeedType, House, Politician, Vote, VoteChoice, VoteRecord
 from app.services.feed import add_event
 from app.services.news_matching import normalize
 from app.services.presenters import bill_url
-from ingestion.jobs.common import parse_dt, politician_index, tracked, upsert
+from ingestion.jobs.common import (
+    date_chunks,
+    feed_worthy,
+    in_exercise,
+    parse_dt,
+    politician_index,
+    sync_start,
+    tracked,
+    upsert,
+)
 from ingestion.jobs.sync_bills import bill_label
 from ingestion.sources import camara as cam
 from ingestion.sources import senado as sen
 
+log = logging.getLogger("ingestion.votes")
 SENADO_RESULT = {"A": "Aprovada", "R": "Rejeitada"}
 
 
@@ -26,9 +36,10 @@ def senado_result(code: str | None) -> str | None:
     return SENADO_RESULT.get((code or "").upper(), code)
 
 
-def window() -> tuple[date, date]:
-    today = datetime.now(UTC).date()
-    return today - timedelta(days=get_settings().sync_days_back), today
+async def window(db, house: House) -> list[tuple[date, date]]:
+    """Do último voto gravado da casa (ou do início da legislatura) até hoje, em blocos."""
+    latest = (await db.execute(select(func.max(Vote.voted_at)).where(Vote.house == house))).scalar()
+    return date_chunks(sync_start(latest), datetime.now(UTC).date())
 
 
 def normalize_orientation(value: str | None) -> str | None:
@@ -96,9 +107,9 @@ async def _save_vote(
             "abstention_count": counts["abstencao"],
         },
     )
-    # Quem estava em exercício e não aparece na lista nominal fica como ausente.
+    # Quem estava em exercício na data e não aparece na lista nominal fica como ausente.
     for ext, p in pols.items():
-        if p.in_office and ext not in choices:
+        if ext not in choices and in_exercise(p, voted_at):
             choices[ext] = ("ausente", None)
 
     existing = {
@@ -108,6 +119,7 @@ async def _save_vote(
         ).scalars()
     }
     title = (bill.official_summary if bill else None) or description or "Votação"
+    to_feed = feed_worthy(voted_at)
     n = 0
     for ext, (choice, orientation) in choices.items():
         p = pols.get(ext)
@@ -123,12 +135,13 @@ async def _save_vote(
                     party_orientation=orientation,
                 )
             )
+        if rec is None and to_feed:
             await add_event(
                 db, p.id, FeedType.vote, vote.id, voted_at,
                 {"title": title[:300], "choice": choice, "result": result,
                  "bill": _bill_label(bill), "party_orientation": orientation},
             )  # fmt: skip
-        else:
+        if rec is not None:
             rec.choice, rec.party_orientation = VoteChoice(choice), orientation
         n += 1
     return n
@@ -140,63 +153,84 @@ def _bill_label(bill: Bill | None) -> str | None:
     return bill_label(bill)
 
 
+async def _fetch_camara_vote(api: cam.CamaraSource, v: dict):
+    """Votos nominais + orientação + detalhe de uma votação; None se simbólica ou com erro."""
+    vid = str(v["id"])
+    try:
+        votos = await api.votos(vid)
+    except Exception as e:  # noqa: BLE001 — um item quebrado na fonte não derruba o job
+        log.warning("votação %s ignorada: %s", vid, e)
+        return None
+    if not votos:
+        return None  # votação simbólica: sem voto nominal
+    orient, detail = await asyncio.gather(
+        api.orientacoes(vid), api.votacao(vid), return_exceptions=True
+    )
+    orient = [] if isinstance(orient, BaseException) else orient
+    detail = {} if isinstance(detail, BaseException) else detail
+    return v, votos, orient, detail
+
+
 async def sync_camara(api: cam.CamaraSource) -> None:
-    start, end = window()
     async with tracked("sync_votes", "camara") as run, SessionLocal() as db:
         pols = await politician_index(db, House.camara)
-        votacoes = [v async for v in api.votacoes(start, end)]
-        for v in votacoes:
-            # Só o Plenário: em comissões só votam os membros, e "ausente" não faria sentido.
-            if (v.get("siglaOrgao") or "").upper() != "PLEN":
-                continue
-            vid = str(v["id"])
-            votos, orient, detail = await asyncio.gather(
-                api.votos(vid), api.orientacoes(vid), api.votacao(vid)
-            )
-            if not votos:
-                continue  # votação simbólica: sem voto nominal
-            orient_by_party = orientation_by_party(orient)
-            choices = {}
-            for item in votos:
-                dep = item.get("deputado_") or {}
-                party = (dep.get("siglaPartido") or "").upper()
-                choices[str(dep.get("id"))] = (
-                    cam.map_vote(item.get("tipoVoto")),
-                    orient_by_party.get(party),
-                )
-            bill = None
-            afetadas = detail.get("proposicoesAfetadas") or []
-            if afetadas:
-                pa = afetadas[0]
-                bill, _ = await upsert(
-                    db,
-                    Bill,
-                    {"house": House.camara, "external_id": str(pa["id"])},
-                    {
-                        "type": pa.get("siglaTipo") or "PROP",
-                        "number": pa.get("numero"),
-                        "year": pa.get("ano"),
-                        "official_summary": pa.get("ementa"),
-                        "url": bill_url(House.camara, str(pa["id"])),
-                    },
-                )
-            voted_at = parse_dt(v.get("dataHoraRegistro")) or parse_dt(v.get("data"))
-            result = (
-                "Aprovada"
-                if v.get("aprovacao") == 1
-                else ("Rejeitada" if v.get("aprovacao") == 0 else None)
-            )
-            run.items += await _save_vote(
-                db, House.camara, vid, voted_at, v.get("descricao"), result, bill, choices, pols
-            )
-            await db.commit()
+        # Só o Plenário: em comissões só votam os membros, e "ausente" não faria sentido.
+        for start, end in await window(db, House.camara):
+            votacoes = [v async for v in api.votacoes(start, end, id_orgao=cam.PLENARIO_ID)]
+            # Busca em paralelo (limitado pelo HttpClient); grava em sequência, bloco a bloco.
+            fetched = await asyncio.gather(*(_fetch_camara_vote(api, v) for v in votacoes))
+            for item in fetched:
+                if item:
+                    run.items += await _save_camara_vote(db, item, pols)
+                    await db.commit()
+
+
+async def _save_camara_vote(db, item, pols: dict[str, Politician]) -> int:
+    v, votos, orient, detail = item
+    vid = str(v["id"])
+    orient_by_party = orientation_by_party(orient)
+    choices = {}
+    for row in votos:
+        dep = row.get("deputado_") or {}
+        party = (dep.get("siglaPartido") or "").upper()
+        choices[str(dep.get("id"))] = (
+            cam.map_vote(row.get("tipoVoto")),
+            orient_by_party.get(party),
+        )
+    bill = None
+    afetadas = detail.get("proposicoesAfetadas") or []
+    if afetadas:
+        pa = afetadas[0]
+        bill, _ = await upsert(
+            db,
+            Bill,
+            {"house": House.camara, "external_id": str(pa["id"])},
+            {
+                "type": pa.get("siglaTipo") or "PROP",
+                "number": pa.get("numero"),
+                "year": pa.get("ano"),
+                "official_summary": pa.get("ementa"),
+                "url": bill_url(House.camara, str(pa["id"])),
+            },
+        )
+    voted_at = parse_dt(v.get("dataHoraRegistro")) or parse_dt(v.get("data"))
+    result = (
+        "Aprovada"
+        if v.get("aprovacao") == 1
+        else ("Rejeitada" if v.get("aprovacao") == 0 else None)
+    )
+    return await _save_vote(
+        db, House.camara, vid, voted_at, v.get("descricao"), result, bill, choices, pols
+    )
 
 
 async def sync_senado(api: sen.SenadoSource) -> None:
-    start, end = window()
     async with tracked("sync_votes", "senado") as run, SessionLocal() as db:
         pols = await politician_index(db, House.senado)
-        for v in await api.votacoes(start, end):
+        votacoes = []
+        for start, end in await window(db, House.senado):
+            votacoes += await api.votacoes(start, end)
+        for v in votacoes:
             votos = sen.as_list(v.get("votos"))
             if not votos:
                 continue

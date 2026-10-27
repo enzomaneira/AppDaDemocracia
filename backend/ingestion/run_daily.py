@@ -6,12 +6,18 @@ registra sua execução em ingestion_runs; a falha de um não impede os seguinte
 Uso:
     python -m ingestion.run_daily              # todos os jobs
     python -m ingestion.run_daily votes news   # só alguns
+    python -m ingestion.run_daily --since 2023-02-01   # recarga desde uma data
+
+Sem --since, cada job continua de onde o banco parou; com o banco vazio, carrega a
+legislatura atual inteira.
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import sys
+from datetime import date
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
@@ -50,9 +56,21 @@ async def main(selected: list[str]) -> None:
         await senado.aclose()
 
 
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Sincronização diária com as fontes oficiais.")
+    p.add_argument("jobs", nargs="*", choices=[[], *ORDER], help="jobs a rodar (padrão: todos)")
+    p.add_argument(
+        "--since",
+        type=date.fromisoformat,
+        help="recarrega desde esta data (AAAA-MM-DD), em vez de continuar de onde o banco parou",
+    )
+    return p.parse_args(argv)
+
+
 if __name__ == "__main__":
-    setup_logging(get_settings().log_level)
-    unknown = set(sys.argv[1:]) - set(ORDER)
-    if unknown:
-        sys.exit(f"Jobs desconhecidos: {', '.join(unknown)}. Opções: {', '.join(ORDER)}")
-    asyncio.run(main(sys.argv[1:]))
+    args = parse_args(sys.argv[1:])
+    settings = get_settings()
+    if args.since:
+        settings.sync_since = args.since
+    setup_logging(settings.log_level)
+    asyncio.run(main(args.jobs))

@@ -37,12 +37,15 @@ class HttpClient:
             try:
                 async with self._sem:
                     r = await self._client.get(url, params=params, headers=headers)
-                if r.status_code in RETRY_STATUS and attempt < retries:
-                    raise httpx.HTTPStatusError("retry", request=r.request, response=r)
                 r.raise_for_status()
                 return r
             except (httpx.TransportError, httpx.HTTPStatusError) as e:
-                if attempt >= retries:
+                # Só falhas temporárias (rede, 429, 5xx) valem nova tentativa; 404 e cia. não.
+                permanent = (
+                    isinstance(e, httpx.HTTPStatusError)
+                    and e.response.status_code not in RETRY_STATUS
+                )
+                if permanent or attempt >= retries:
                     raise
                 log.warning("retry %s (%s): %s", url, attempt + 1, e)
                 await asyncio.sleep(delay)

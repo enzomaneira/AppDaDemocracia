@@ -54,11 +54,15 @@ class CamaraSource:
     async def deputado(self, dep_id: int | str) -> dict:
         return (await self.client.get_json(f"/deputados/{dep_id}"))["dados"]
 
-    def votacoes(self, start: date, end: date) -> AsyncIterator[dict]:
-        return self._paginate(
-            "/votacoes",
-            {"dataInicio": start.isoformat(), "dataFim": end.isoformat(), "ordem": "ASC"},
-        )
+    def votacoes(self, start: date, end: date, id_orgao: int | None = None) -> AsyncIterator[dict]:
+        params: dict[str, Any] = {
+            "dataInicio": start.isoformat(),
+            "dataFim": end.isoformat(),
+            "ordem": "ASC",
+        }
+        if id_orgao:
+            params["idOrgao"] = id_orgao
+        return self._paginate("/votacoes", params)
 
     async def votacao(self, vot_id: str) -> dict:
         return (await self.client.get_json(f"/votacoes/{vot_id}"))["dados"]
@@ -69,10 +73,14 @@ class CamaraSource:
     async def orientacoes(self, vot_id: str) -> list[dict]:
         return (await self.client.get_json(f"/votacoes/{vot_id}/orientacoes"))["dados"]
 
-    def eventos(self, start: date, end: date) -> AsyncIterator[dict]:
-        return self._paginate(
-            "/eventos", {"dataInicio": start.isoformat(), "dataFim": end.isoformat()}
-        )
+    async def historico(self, dep_id: int | str) -> list[dict]:
+        return (await self.client.get_json(f"/deputados/{dep_id}/historico"))["dados"]
+
+    def eventos(self, start: date, end: date, id_orgao: int | None = None) -> AsyncIterator[dict]:
+        params: dict[str, Any] = {"dataInicio": start.isoformat(), "dataFim": end.isoformat()}
+        if id_orgao:
+            params["idOrgao"] = id_orgao
+        return self._paginate("/eventos", params)
 
     async def evento_deputados(self, ev_id: int | str) -> list[dict]:
         return (await self.client.get_json(f"/eventos/{ev_id}/deputados"))["dados"]
@@ -107,6 +115,30 @@ class CamaraSource:
 
     async def aclose(self) -> None:
         await self.client.aclose()
+
+
+PLENARIO_ID = 180
+
+
+def parse_office_periods(historico: list[dict]) -> list[list[str | None]]:
+    """Histórico do deputado → períodos em exercício [[início, fim|None], ...] (datas ISO).
+
+    Cada mudança de situação abre ou fecha um período: "Exercício" abre; qualquer outra
+    situação (Vacância, Licença, Afastado, Fim de Mandato...) fecha. Linhas sem situação
+    (só troca de nome/partido) não mudam nada.
+    """
+    periods: list[list[str | None]] = []
+    for item in sorted(historico, key=lambda h: h.get("dataHora") or ""):
+        situacao = normalize(item.get("situacao") or "")
+        day = (item.get("dataHora") or "")[:10]
+        if not situacao or not day:
+            continue
+        open_ = bool(periods) and periods[-1][1] is None
+        if situacao == "exercicio" and not open_:
+            periods.append([day, None])
+        elif situacao != "exercicio" and open_:
+            periods[-1][1] = day
+    return periods
 
 
 def map_vote(tipo: str | None) -> str:

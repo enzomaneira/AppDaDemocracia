@@ -1,3 +1,4 @@
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 
@@ -32,6 +33,9 @@ class Settings(BaseSettings):
     sync_limit: int = 0
     # Quantos dias para trás buscar votações, presença, proposições (1 = só ontem; maior = carga).
     sync_days_back: int = 1
+    # Força o início da janela (recarga). Sem isso, cada job continua de onde o banco parou.
+    sync_since: date | None = None
+    feed_max_age_days: int = 30
     agenda_days_ahead: int = 14
     http_concurrency: int = 5
     news_feeds: list[str] = [

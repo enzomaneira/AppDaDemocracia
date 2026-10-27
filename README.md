@@ -90,6 +90,17 @@ Um único processo (`python -m ingestion.run_daily`) roda os jobs em sequência 
 | 6 | sync_news | RSS da Agência Câmara/Senado + Google News (só para políticos com seguidores) |
 | 7 | refresh_stats | recalcula `politician_stats` (legislatura atual e ano corrente) |
 
+A sincronização é **incremental**: votações e presença continuam a partir do último item gravado
+no banco (menos `SYNC_DAYS_BACK` dias de folga), então recessos longos ou dias sem rodar não
+deixam buracos. Com o banco vazio, cada job carrega a legislatura inteira, em blocos de até 3 meses
+(limite da API da Câmara). Para forçar uma recarga desde uma data, use `--since AAAA-MM-DD` ou a
+variável `SYNC_SINCE`. A carga histórica não gera itens de feed (só eventos dos últimos
+`FEED_MAX_AGE_DAYS` dias, padrão 30).
+
+"Ausente" (em votações e sessões) só é contado para quem estava **em exercício** na data, segundo
+o histórico oficial do deputado (`/deputados/{id}/historico`). Assim, suplências, licenças e
+vacâncias não viram faltas.
+
 Cada job é idempotente (upsert por `house + external_id`) e grava a execução em `ingestion_runs`.
 Se uma fonte falhar, os demais jobs seguem, e o app continua mostrando o último dado salvo com
 "atualizado em".
@@ -117,11 +128,8 @@ Variáveis (referências do Railway entre `${{ }}`):
 
 Opcionais: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEWS_API_KEY`, `LLM_API_KEY` (P1).
 
-Carga inicial (mais histórico) ou execução manual fora do horário:
-
-```bash
-railway ssh --service Backend -- env SYNC_DAYS_BACK=30 python -m ingestion.run_daily
-```
+Recarga completa da legislatura: defina `SYNC_SINCE=2023-02-01` no serviço sync-diario, dispare
+uma execução e depois remova a variável (sem ela, o cron volta ao modo incremental).
 
 ## Status do MVP
 
