@@ -1,0 +1,24 @@
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /srv
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		-Server
+	}
+	# Arquivos com hash no nome podem ficar em cache para sempre; o resto, não.
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header /sw.js Cache-Control "no-cache"
+	header /index.html Cache-Control "no-cache"
+
+	# SPA: rotas do React Router caem no index.html.
+	try_files {path} /index.html
+	file_server
+}

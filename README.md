@@ -96,16 +96,32 @@ Se uma fonte falhar, os demais jobs seguem, e o app continua mostrando o último
 
 ## Deploy no Railway
 
-| Serviço | Root | Comando |
-|---|---|---|
-| postgres | plugin PostgreSQL | expõe `DATABASE_URL` |
-| api | `backend/` | Dockerfile (`alembic upgrade head && uvicorn …`), health check `/api/v1/health` |
-| sync-diario | `backend/` | `python -m ingestion.run_daily`, Cron Job `0 6 * * *` (03h em Brasília) |
-| web | `frontend/` | build `npm run build`, site estático de `dist/`, `VITE_API_URL` = domínio da api |
+Projeto **App da Democracia** (ambiente `production`). Os serviços estão ligados ao repositório
+GitHub e fazem deploy a cada push na `main`; cada um só reconstrói quando a própria pasta muda
+(watch paths).
 
-Variáveis: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_MIN`, `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, `CORS_ORIGINS` (JSON, ex.: `["https://app.exemplo.com.br"]`),
-`NEWS_API_KEY` (opcional), `LLM_API_KEY` (P1).
+| Serviço | Root | Configuração |
+|---|---|---|
+| Postgres | template Railway | expõe `DATABASE_URL` |
+| Backend | `/backend` | `Dockerfile`; pre-deploy `alembic upgrade head`; health check `/api/v1/health` |
+| sync-diario | `/backend` | mesma imagem, start `python -m ingestion.run_daily`, Cron `0 6 * * *` (03h em Brasília), sem restart |
+| Frontend | `/frontend` | `Dockerfile` (build do Vite + Caddy servindo `dist/` com fallback de SPA) |
+
+Variáveis (referências do Railway entre `${{ }}`):
+
+| Serviço | Variáveis |
+|---|---|
+| Backend | `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET` (aleatório), `JWT_EXPIRES_MIN=15`, `CORS_ORIGINS=["https://${{Frontend.RAILWAY_PUBLIC_DOMAIN}}"]`, `PORT=8080` |
+| sync-diario | `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SYNC_DAYS_BACK=3` |
+| Frontend | `VITE_API_URL=https://${{Backend.RAILWAY_PUBLIC_DOMAIN}}` (usada no build), `PORT=8080` |
+
+Opcionais: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEWS_API_KEY`, `LLM_API_KEY` (P1).
+
+Carga inicial (mais histórico) ou execução manual fora do horário:
+
+```bash
+railway ssh --service Backend -- env SYNC_DAYS_BACK=30 python -m ingestion.run_daily
+```
 
 ## Status do MVP
 

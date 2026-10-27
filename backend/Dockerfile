@@ -11,6 +11,6 @@ RUN pip install .
 COPY alembic.ini ./
 COPY alembic ./alembic
 
-# Serviço "api". O serviço "sync-diario" usa a mesma imagem com:
-#   python -m ingestion.run_daily
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
+# Serviço "api" (as migrações rodam antes, no pre-deploy do Railway / no compose).
+# O serviço "sync-diario" usa a mesma imagem com: python -m ingestion.run_daily
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
