@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { useFollows, useSearch, type SearchFilters } from "../api/hooks";
 import type { House } from "../api/types";
@@ -45,7 +45,12 @@ export default function Search() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Buscar parlamentares</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">Buscar parlamentares</h1>
+        <Link to="/comparar" className="btn-secondary min-h-9">
+          <span aria-hidden="true">⇄</span> Comparar dois
+        </Link>
+      </div>
       <form role="search" className="flex flex-col gap-3" onSubmit={(e) => e.preventDefault()}>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Nome</span>

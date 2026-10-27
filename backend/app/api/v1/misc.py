@@ -1,17 +1,15 @@
-"""Notícias dos seguidos, comparação, health check e rotas de admin."""
+"""Notícias dos seguidos, health check e rotas de admin."""
 
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import case, func, select, text
-from sqlalchemy.orm import aliased
+from sqlalchemy import func, select, text
 
 from app.api.deps import DB, AdminUser, CurrentUser
 from app.api.v1.me import followed_ids
-from app.api.v1.politicians import get_by_slug, load_stats, news_page
-from app.models import IngestionRun, NewsMention, VoteChoice, VoteRecord
-from app.schemas import CompareOut, IngestionRunOut, NewsOut, Page
-from app.services.presenters import politician_summary
+from app.api.v1.politicians import news_page
+from app.models import IngestionRun, NewsMention
+from app.schemas import IngestionRunOut, NewsOut, Page
 
 router = APIRouter()
 
@@ -31,34 +29,6 @@ async def news(
         return await news_page(db, ids, cursor, limit)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
-
-
-@router.get("/compare", response_model=CompareOut, tags=["compare"])
-async def compare(db: DB, a: str, b: str, period: str | None = None) -> CompareOut:
-    pa, pb = await get_by_slug(db, a), await get_by_slug(db, b)
-    ra, rb = aliased(VoteRecord), aliased(VoteRecord)
-    # Só votos públicos se comparam (voto secreto, presença e ausências ficam de fora).
-    public = (VoteChoice.sim, VoteChoice.nao, VoteChoice.abstencao, VoteChoice.obstrucao)
-    q = (
-        select(func.count(), func.sum(case((ra.choice != rb.choice, 1), else_=0)))
-        .select_from(ra)
-        .join(rb, rb.vote_id == ra.vote_id)
-        .where(
-            ra.politician_id == pa.id,
-            rb.politician_id == pb.id,
-            ra.choice.in_(public),
-            rb.choice.in_(public),
-        )
-    )
-    common, divergent = (await db.execute(q)).one()
-    return CompareOut(
-        a=politician_summary(pa),
-        b=politician_summary(pb),
-        stats_a=await load_stats(db, pa, period),
-        stats_b=await load_stats(db, pb, period),
-        common_votes=common or 0,
-        divergent_votes=int(divergent or 0),
-    )
 
 
 @router.get("/health", tags=["ops"])

@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/States";
 import Account from "./pages/Account";
+import Compare from "./pages/Compare";
 import { Login, Register } from "./pages/Auth";
 import Home from "./pages/Home";
 import News from "./pages/News";
@@ -31,6 +32,7 @@ export default function App() {
         />
         <Route path="votacao/:id" element={<Vote />} />
         <Route path="noticias" element={<News />} />
+        <Route path="comparar" element={<Compare />} />
         <Route path="conta" element={<Account />} />
         <Route path="entrar" element={<Login />} />
         <Route path="cadastro" element={<Register />} />

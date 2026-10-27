@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 const NAV = [
   { to: "/", label: "Feed", icon: "⌂", end: true },
   { to: "/buscar", label: "Buscar", icon: "⌕" },
+  { to: "/comparar", label: "Comparar", icon: "⇄" },
   { to: "/noticias", label: "Notícias", icon: "☰" },
   { to: "/conta", label: "Conta", icon: "◉" },
 ];
@@ -61,7 +62,7 @@ export function Layout() {
       {/* Navegação inferior no celular (mobile first) */}
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden dark:border-slate-800 dark:bg-slate-950"
+        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden dark:border-slate-800 dark:bg-slate-950"
       >
         {NAV.map((n) => (
           <NavLink

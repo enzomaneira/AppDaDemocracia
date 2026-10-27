@@ -77,6 +77,9 @@ function Header({ p }: { p: PoliticianProfile }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FollowButton id={p.id} following={p.is_following} name={p.name} />
+        <Link to={`/comparar?a=${p.slug}`} className="btn-secondary">
+          <span aria-hidden="true">⇄</span> Comparar
+        </Link>
         <a href={p.official_url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
           Página oficial ↗
         </a>

@@ -215,8 +215,19 @@ class CompareOut(BaseModel):
     b: PoliticianSummary
     stats_a: StatsOut
     stats_b: StatsOut
+    same_house: bool
+    # Votações nominais em que os dois deram voto público (sim, não, abstenção, obstrução).
     common_votes: int
     divergent_votes: int
+    # % das votações em comum em que votaram igual; None se não houver nenhuma.
+    agreement_rate: float | None
+
+
+class CompareVote(BaseModel):
+    vote: VoteOut
+    choice_a: str
+    choice_b: str
+    agree: bool
 
 
 class IngestionRunOut(ORM):

@@ -3,6 +3,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { api, toQuery } from "./client";
 import type {
   AgendaItem,
+  Compare,
+  CompareVote,
   Expenses,
   FeedItem,
   FeedType,
@@ -45,7 +47,11 @@ export const useSearch = (f: SearchFilters) =>
   );
 
 export const usePolitician = (slug: string) =>
-  useQuery({ queryKey: ["politician", slug], queryFn: () => api<PoliticianProfile>(`/politicians/${slug}`) });
+  useQuery({
+    queryKey: ["politician", slug],
+    queryFn: () => api<PoliticianProfile>(`/politicians/${slug}`),
+    enabled: !!slug,
+  });
 
 export const useStats = (slug: string, period?: string) =>
   useQuery({
@@ -86,6 +92,22 @@ export const useFeed = (type: FeedType | "", enabled: boolean) =>
 export const useNews = (politician: string, enabled: boolean) =>
   useInfiniteQuery(
     infinite<NewsItem>(["news", politician], (cursor) => `/news${toQuery({ politician, cursor })}`, enabled),
+  );
+
+export const useCompare = (a: string, b: string, period?: string) =>
+  useQuery({
+    queryKey: ["compare", a, b, period],
+    queryFn: () => api<Compare>(`/compare${toQuery({ a, b, period })}`),
+    enabled: !!a && !!b && a !== b,
+  });
+
+export const useCompareVotes = (a: string, b: string, period: string | undefined, divergent: boolean) =>
+  useInfiniteQuery(
+    infinite<CompareVote>(
+      ["compare-votes", a, b, period, divergent],
+      (cursor) => `/compare/votes${toQuery({ a, b, period, divergent: divergent || undefined, cursor })}`,
+      !!a && !!b && a !== b,
+    ),
   );
 
 export const useDataStatus = () =>

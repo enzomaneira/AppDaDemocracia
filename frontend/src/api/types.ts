@@ -163,3 +163,21 @@ export interface FeedItem {
   politician: PoliticianSummary;
   payload: Record<string, string | null>;
 }
+
+export interface Compare {
+  a: PoliticianSummary;
+  b: PoliticianSummary;
+  stats_a: Stats;
+  stats_b: Stats;
+  same_house: boolean;
+  common_votes: number;
+  divergent_votes: number;
+  agreement_rate: number | null;
+}
+
+export interface CompareVote {
+  vote: VoteInfo;
+  choice_a: VoteChoice;
+  choice_b: VoteChoice;
+  agree: boolean;
+}

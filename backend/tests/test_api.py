@@ -138,13 +138,6 @@ async def test_follow_list_is_private(client, seed):
     assert (await client.get("/api/v1/me/feed")).status_code == 401
 
 
-async def test_compare(client, db, seed):
-    await compute_all(db, parse_period("2026", 57))
-    r = await client.get("/api/v1/compare", params={"a": "ana-souza-sp", "b": "bruno-lima-rj"})
-    body = r.json()
-    assert body["common_votes"] == 1 and body["divergent_votes"] == 1
-
-
 async def test_lgpd_export_and_delete(client, seed):
     tokens = await register(client)
     h = auth(tokens)
