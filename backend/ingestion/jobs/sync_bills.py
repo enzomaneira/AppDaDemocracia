@@ -1,9 +1,15 @@
-"""4 · Proposições de autoria e pareceres de relatoria (Câmara)."""
+"""4 · Proposições de autoria (Câmara): só projetos, gravados em lote.
+
+A API chama de "proposição" também requerimentos, pareceres e documentos de tramitação
+(um deputado chega a ter dezenas de milhares). Para a métrica "proposições apresentadas"
+contam só os projetos (STATS_BILL_TYPES), filtrados já na consulta à API.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
@@ -13,18 +19,12 @@ from app.db.session import SessionLocal
 from app.models import AuthorRole, Bill, BillAuthor, FeedType, House
 from app.services.feed import add_event
 from app.services.presenters import bill_url
-from app.services.stats import legislature_start_year
-from ingestion.jobs.common import politician_index, tracked, upsert
+from app.services.stats import STATS_BILL_TYPES, legislature_start_year
+from ingestion.jobs.common import politician_index, tracked
 from ingestion.sources.camara import CamaraSource
 
 log = logging.getLogger("ingestion.bills")
-
-# Pareceres aparecem como "autoria" do relator na API; contam como relatoria.
-RELATOR_TYPES = {"PRL", "PPP", "PAR", "PRLP", "PRLE"}
-
-
-def author_role(bill_type: str) -> AuthorRole:
-    return AuthorRole.relator if bill_type.upper() in RELATOR_TYPES else AuthorRole.autor
+COMMIT_EVERY = 2000
 
 
 def bill_label(bill: Bill) -> str:
@@ -51,40 +51,66 @@ async def sync_camara(api: CamaraSource) -> None:
 
         async def fetch(ext: str):
             try:
-                return ext, [b async for b in api.proposicoes_autor(ext, start)]
+                return ext, [b async for b in api.proposicoes_autor(ext, start, STATS_BILL_TYPES)]
             except Exception as err:  # noqa: BLE001 — um deputado com erro não derruba o job
                 log.warning("proposições do deputado %s ignoradas: %s", ext, err)
                 return ext, []
 
-        for ext, props in await asyncio.gather(*(fetch(e) for e in pols)):
+        results = await asyncio.gather(*(fetch(e) for e in pols))
+
+        # Gravação em lote: o que já existe é carregado uma vez, em vez de 2 consultas por item.
+        bill_ids: dict[str, uuid.UUID] = dict(
+            (await db.execute(select(Bill.external_id, Bill.id).where(Bill.house == House.camara)))
+            .tuples()
+            .all()
+        )
+        links = set(
+            (
+                await db.execute(
+                    select(BillAuthor.bill_id, BillAuthor.politician_id).where(
+                        BillAuthor.role == AuthorRole.autor
+                    )
+                )
+            )
+            .tuples()
+            .all()
+        )
+        pending = 0
+        for ext, props in results:
             p = pols[ext]
             for b in props:
-                bill, _ = await upsert(
-                    db,
-                    Bill,
-                    {"house": House.camara, "external_id": str(b["id"])},
-                    {
-                        "type": b.get("siglaTipo") or "PROP",
-                        "number": b.get("numero"),
-                        "year": b.get("ano"),
-                        "official_summary": b.get("ementa"),
-                        "url": bill_url(House.camara, str(b["id"])),
-                    },
-                )
-                role = author_role(bill.type)
-                link = await db.execute(
-                    select(BillAuthor).filter_by(bill_id=bill.id, politician_id=p.id, role=role)
-                )
-                link_missing = link.scalar_one_or_none() is None
-                if link_missing:
-                    db.add(BillAuthor(bill_id=bill.id, politician_id=p.id, role=role))
-                if link_missing and to_feed:
-                    await add_event(
-                        db, p.id, FeedType.bill, bill.id, datetime.now(UTC),
-                        {"title": (b.get("ementa") or "")[:300], "bill": bill_label(bill),
-                         "role": role.value, "url": bill.url},
-                    )  # fmt: skip
+                bext = str(b["id"])
+                bill_id = bill_ids.get(bext)
+                if bill_id is None:
+                    bill = Bill(
+                        id=uuid.uuid4(),
+                        house=House.camara,
+                        external_id=bext,
+                        type=b.get("siglaTipo") or "PROP",
+                        number=b.get("numero"),
+                        year=b.get("ano"),
+                        official_summary=b.get("ementa"),
+                        url=bill_url(House.camara, bext),
+                    )
+                    db.add(bill)
+                    bill_id = bill_ids[bext] = bill.id
+                    pending += 1
+                if (bill_id, p.id) in links:
+                    continue
+                links.add((bill_id, p.id))
+                db.add(BillAuthor(bill_id=bill_id, politician_id=p.id, role=AuthorRole.autor))
+                pending += 1
                 run.items += 1
+                if to_feed:
+                    label = f"{b.get('siglaTipo')} {b.get('numero')}/{b.get('ano')}"
+                    await add_event(
+                        db, p.id, FeedType.bill, bill_id, datetime.now(UTC),
+                        {"title": (b.get("ementa") or "")[:300], "bill": label,
+                         "url": bill_url(House.camara, bext)},
+                    )  # fmt: skip
+                if pending >= COMMIT_EVERY:
+                    await db.commit()
+                    pending = 0
         await db.commit()
 
 

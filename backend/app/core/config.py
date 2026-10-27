@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     sync_days_back: int = 1
     # Força o início da janela (recarga). Sem isso, cada job continua de onde o banco parou.
     sync_since: date | None = None
+    # Jobs a rodar, separados por vírgula (ex.: "bills,expenses,stats"); vazio = todos.
+    # Útil no cron do Railway, cujo comando é fixo.
+    sync_jobs: str = ""
     feed_max_age_days: int = 30
     agenda_days_ahead: int = 14
     http_concurrency: int = 5

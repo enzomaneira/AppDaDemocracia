@@ -73,4 +73,8 @@ if __name__ == "__main__":
     if args.since:
         settings.sync_since = args.since
     setup_logging(settings.log_level)
-    asyncio.run(main(args.jobs))
+    jobs = args.jobs or [j.strip() for j in settings.sync_jobs.split(",") if j.strip()]
+    unknown = set(jobs) - set(ORDER)
+    if unknown:
+        sys.exit(f"Jobs desconhecidos em SYNC_JOBS: {', '.join(unknown)}")
+    asyncio.run(main(jobs))

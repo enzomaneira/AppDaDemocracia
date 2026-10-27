@@ -2,7 +2,7 @@ import itertools
 from decimal import Decimal
 
 from ingestion.jobs.common import slugify
-from ingestion.jobs.sync_bills import author_role, bill_label
+from ingestion.jobs.sync_bills import bill_label
 from ingestion.jobs.sync_expenses import parse_brl
 from ingestion.jobs.sync_votes import orientation_by_party, parse_identificacao, senado_result
 from ingestion.sources import camara, senado
@@ -29,11 +29,9 @@ def test_orientation_party_beats_federation():
     assert "GOVERNO" not in out
 
 
-def test_parecer_counts_as_relatoria():
-    from app.models import AuthorRole, Bill
+def test_labels_and_senado_result():
+    from app.models import Bill
 
-    assert author_role("PRL") == AuthorRole.relator
-    assert author_role("PL") == AuthorRole.autor
     assert bill_label(Bill(type="PL", number=10, year=2026)) == "PL 10/2026"
     assert bill_label(Bill(type="PRL", number=1, year=0)) == "PRL"
     assert senado_result("A") == "Aprovada"
@@ -207,3 +205,20 @@ async def test_http_does_not_retry_404_but_retries_503(monkeypatch):
     assert (await client.get_json("/flaky")) == {"ok": 1}
     assert calls["n"] == 3  # 503, 503, 200
     await client.aclose()
+
+
+def test_sync_jobs_env(monkeypatch):
+    import subprocess
+    import sys
+
+    r = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import runpy; runpy.run_module('ingestion.run_daily', run_name='__main__')",
+        ],
+        env={**__import__("os").environ, "SYNC_JOBS": "votes,nao-existe"},
+        capture_output=True,
+        text=True,
+    )
+    assert r.returncode != 0 and "nao-existe" in r.stderr

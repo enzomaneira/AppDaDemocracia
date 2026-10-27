@@ -20,6 +20,7 @@ from app.models import (
     Attendance,
     AttendanceStatus,
     AuthorRole,
+    Bill,
     BillAuthor,
     Expense,
     House,
@@ -33,6 +34,10 @@ from app.models import (
 
 # Início de cada legislatura (1º de fevereiro do ano seguinte à eleição; 4 anos de duração).
 LEGISLATURE_57_START_YEAR = 2023
+
+# Tipos que contam como "proposição apresentada": projetos de lei, de lei complementar,
+# de emenda à Constituição, de decreto legislativo e de resolução.
+STATS_BILL_TYPES = ("PL", "PLP", "PEC", "PDL", "PRC")
 
 
 @dataclass(frozen=True)
@@ -126,8 +131,12 @@ async def compute_all(db: AsyncSession, period: Period) -> int:
     )
     votes = {r.politician_id: r for r in (await db.execute(votes_q)).all()}
 
-    bills_q = select(BillAuthor.politician_id, BillAuthor.role, func.count()).group_by(
-        BillAuthor.politician_id, BillAuthor.role
+    # Só projetos contam como proposição apresentada (não requerimentos, pareceres etc.).
+    bills_q = (
+        select(BillAuthor.politician_id, BillAuthor.role, func.count())
+        .join(Bill, Bill.id == BillAuthor.bill_id)
+        .where(Bill.type.in_(STATS_BILL_TYPES))
+        .group_by(BillAuthor.politician_id, BillAuthor.role)
     )
     bills: dict[uuid.UUID, dict[AuthorRole, int]] = {}
     for pid, role, n in (await db.execute(bills_q)).all():

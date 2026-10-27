@@ -91,11 +91,16 @@ class CamaraSource:
             {"dataInicio": start.isoformat(), "dataFim": end.isoformat()},
         )
 
-    def proposicoes_autor(self, dep_id: int | str, start: date) -> AsyncIterator[dict]:
-        return self._paginate(
-            "/proposicoes",
-            {"idDeputadoAutor": dep_id, "dataApresentacaoInicio": start.isoformat()},
-        )
+    def proposicoes_autor(
+        self, dep_id: int | str, start: date, tipos: tuple[str, ...] = ()
+    ) -> AsyncIterator[dict]:
+        params: dict[str, Any] = {
+            "idDeputadoAutor": dep_id,
+            "dataApresentacaoInicio": start.isoformat(),
+        }
+        if tipos:
+            params["siglaTipo"] = ",".join(tipos)
+        return self._paginate("/proposicoes", params)
 
     def despesas(self, dep_id: int | str, ano: int, mes: int | None = None) -> AsyncIterator[dict]:
         params: dict[str, Any] = {"ano": ano}

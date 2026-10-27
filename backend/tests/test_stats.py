@@ -76,6 +76,20 @@ async def test_compute_all(db, seed):
     assert ana.house_avg["attendance_rate"] == 62.5
 
 
+async def test_requerimentos_do_not_count_as_bills(db, seed):
+    from app.models import AuthorRole, Bill, BillAuthor
+
+    for i, tipo in enumerate(["REQ", "RPD", "DOC", "PEC"]):
+        b = Bill(house=House.camara, external_id=f"x{i}", type=tipo)
+        db.add(b)
+        await db.flush()
+        db.add(BillAuthor(bill_id=b.id, politician_id=seed["a"].id, role=AuthorRole.autor))
+    await db.commit()
+    await compute_all(db, parse_period("2026", 57))
+    ana = await db.get(PoliticianStats, (seed["a"].id, "2026"))
+    assert ana.bills_authored == 2  # o PL do seed + a PEC; requerimentos e documentos não
+
+
 async def test_compute_all_is_idempotent(db, seed):
     period = parse_period("2026", 57)
     await compute_all(db, period)
