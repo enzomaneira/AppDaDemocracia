@@ -64,3 +64,12 @@ export function compareToAverage(value: number | null, avg: number | null) {
   const n = Math.abs(pct).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
   return pct > 0 ? `${n}% acima da média da casa` : `${n}% abaixo da média da casa`;
 }
+
+export const BILL_TYPE_LABEL: Record<string, string> = {
+  PL: "Projeto de lei",
+  PLP: "Projeto de lei complementar",
+  PEC: "Proposta de emenda à Constituição",
+  PDL: "Projeto de decreto legislativo",
+  PRC: "Projeto de resolução",
+  PRS: "Projeto de resolução",
+};

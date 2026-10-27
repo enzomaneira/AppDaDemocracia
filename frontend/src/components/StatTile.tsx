@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { compareToAverage } from "../lib/format";
 
 interface Props {
@@ -6,10 +8,11 @@ interface Props {
   avg: number | null;
   format: (v: number | null) => string;
   hint?: string;
+  action?: ReactNode;
 }
 
 /** Métrica + média da casa. Sem cores de "bom/ruim": o app não julga, só contextualiza. */
-export function StatTile({ label, value, avg, format, hint }: Props) {
+export function StatTile({ label, value, avg, format, hint, action }: Props) {
   const cmp = compareToAverage(value, avg);
   return (
     <div className="card flex flex-col gap-1">
@@ -20,6 +23,7 @@ export function StatTile({ label, value, avg, format, hint }: Props) {
         {cmp && <> · {cmp}</>}
       </span>
       {hint && <span className="text-xs muted">{hint}</span>}
+      {action}
     </div>
   );
 }

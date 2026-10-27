@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { api, toQuery } from "./client";
 import type {
   AgendaItem,
+  BillsPage,
   Compare,
   CompareVote,
   Expenses,
@@ -71,6 +72,15 @@ export const usePoliticianNews = (slug: string) =>
   useInfiniteQuery(
     infinite<NewsItem>(["pnews", slug], (cursor) => `/politicians/${slug}/news${toQuery({ cursor })}`),
   );
+
+export const usePoliticianBills = (slug: string, type: string, q: string) =>
+  useInfiniteQuery({
+    queryKey: ["pbills", slug, type, q],
+    queryFn: ({ pageParam }: { pageParam?: string }) =>
+      api<BillsPage>(`/politicians/${slug}/bills${toQuery({ type, q, cursor: pageParam })}`),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last: BillsPage) => last.next_cursor ?? undefined,
+  });
 
 export const useExpenses = (slug: string, year: number) =>
   useQuery({

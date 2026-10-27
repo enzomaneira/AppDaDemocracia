@@ -181,3 +181,10 @@ export interface CompareVote {
   choice_b: VoteChoice;
   agree: boolean;
 }
+
+export interface BillsPage {
+  items: Bill[];
+  next_cursor: string | null;
+  total: number;
+  by_type: Record<string, number>;
+}

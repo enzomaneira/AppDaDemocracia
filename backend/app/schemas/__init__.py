@@ -134,6 +134,14 @@ class BillOut(ORM):
     url: str | None
 
 
+class BillsPage(BaseModel):
+    items: list[BillOut]
+    next_cursor: str | None = None
+    # Total com os filtros atuais e contagem por tipo (sem o filtro de tipo), para os chips.
+    total: int
+    by_type: dict[str, int]
+
+
 class VoteOut(BaseModel):
     id: uuid.UUID
     house: str

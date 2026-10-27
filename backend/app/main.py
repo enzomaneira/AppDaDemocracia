@@ -4,7 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.v1 import auth, compare, me, misc, politicians, votes
+from app.api.v1 import auth, bills, compare, me, misc, politicians, votes
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.ratelimit import limiter
@@ -32,6 +32,7 @@ app.add_middleware(
 )
 
 v1 = APIRouter(prefix="/api/v1")
-for r in (auth.router, me.router, politicians.router, votes.router, compare.router, misc.router):
+routers = (auth, me, politicians, bills, votes, compare, misc)
+for r in (m.router for m in routers):
     v1.include_router(r)
 app.include_router(v1)

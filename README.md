@@ -136,7 +136,11 @@ uma execução e depois remova a variável (sem ela, o cron volta ao modo increm
 Pronto (P0): conta (e-mail/senha, refresh token com rotação, rota `/auth/google` para ID token do
 Google), onboarding por UF, seguir/deixar de seguir, busca com filtros, feed por cursor, perfil com
 desempenho e média da casa, agenda, votações com orientação do partido, notícias, página de votação,
-exportação e exclusão de conta (LGPD), PWA instalável, rotas admin básicas e `/compare` (P1).
+exportação e exclusão de conta (LGPD), PWA instalável e rotas admin básicas.
+
+Também prontos: **comparar parlamentares** (`/comparar`: métricas lado a lado, concordância e
+votações em comum; RF14) e a aba **Proposições** do perfil (`/politico/<slug>?aba=proposicoes`:
+projetos de autoria ou coautoria, com filtro por tipo, busca e link para a ficha oficial).
 
 Pendências conhecidas:
 

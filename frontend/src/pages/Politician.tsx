@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import {
   useAgenda,
   useExpenses,
   usePolitician,
+  usePoliticianBills,
   usePoliticianNews,
   usePoliticianVotes,
   useStats,
@@ -18,11 +19,12 @@ import { Avatar, PoliticianLine } from "../components/PoliticianCard";
 import { StatTile } from "../components/StatTile";
 import { Empty, ErrorBox, LoadMore, Loading, UpdatedAt } from "../components/States";
 import { VoteBadge } from "../components/VoteBadge";
-import { billLabel, formatBRL, formatDate, formatNumber, formatPercent } from "../lib/format";
+import { BILL_TYPE_LABEL, billLabel, formatBRL, formatDate, formatNumber, formatPercent } from "../lib/format";
 
 const TABS = [
   ["desempenho", "Desempenho"],
   ["votacoes", "Votações"],
+  ["proposicoes", "Proposições"],
   ["agenda", "Agenda"],
   ["noticias", "Notícias"],
 ] as const;
@@ -30,7 +32,20 @@ type Tab = (typeof TABS)[number][0];
 
 export default function Politician() {
   const { slug = "" } = useParams();
-  const [tab, setTab] = useState<Tab>("desempenho");
+  // A aba fica na URL (?aba=proposicoes): dá para compartilhar o link direto para ela.
+  const [params, setParams] = useSearchParams();
+  const fromUrl = params.get("aba");
+  const tab: Tab = TABS.some(([id]) => id === fromUrl) ? (fromUrl as Tab) : "desempenho";
+  const setTab = (id: Tab) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === "desempenho") next.delete("aba");
+        else next.set("aba", id);
+        return next;
+      },
+      { replace: true },
+    );
   const { data: p, isLoading, error } = usePolitician(slug);
 
   if (isLoading) return <Loading />;
@@ -55,8 +70,9 @@ export default function Politician() {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "desempenho" && <Performance slug={slug} />}
+        {tab === "desempenho" && <Performance slug={slug} onShowBills={() => setTab("proposicoes")} />}
         {tab === "votacoes" && <Votes slug={slug} />}
+        {tab === "proposicoes" && <BillsTab slug={slug} />}
         {tab === "agenda" && <AgendaTab slug={slug} />}
         {tab === "noticias" && <NewsTab slug={slug} />}
       </div>
@@ -113,7 +129,7 @@ function periodOptions() {
   ] as [string, string][];
 }
 
-function Performance({ slug }: { slug: string }) {
+function Performance({ slug, onShowBills }: { slug: string; onShowBills: () => void }) {
   const [period, setPeriod] = useState("");
   const { data: s, isLoading, error } = useStats(slug, period || undefined);
   const year = period ? Number(period) : new Date().getFullYear();
@@ -165,6 +181,13 @@ function Performance({ slug }: { slug: string }) {
               avg={s.bills_authored.house_avg}
               format={formatNumber}
               hint={s.bills_reported ? `${s.bills_reported} relatadas` : undefined}
+              action={
+                (s.bills_authored.value ?? 0) > 0 && (
+                  <button type="button" onClick={onShowBills} className="self-start text-sm text-marca underline">
+                    Ver as proposições →
+                  </button>
+                )
+              }
             />
             <StatTile
               label="Gastos da cota parlamentar"
@@ -248,6 +271,107 @@ function Votes({ slug }: { slug: string }) {
         ))}
       </ul>
       <LoadMore hasNext={q.hasNextPage} loading={q.isFetchingNextPage} onClick={() => q.fetchNextPage()} />
+    </div>
+  );
+}
+
+function BillsTab({ slug }: { slug: string }) {
+  const [type, setType] = useState("");
+  const [text, setText] = useState("");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQ(text.trim()), 300);
+    return () => clearTimeout(t);
+  }, [text]);
+  const res = usePoliticianBills(slug, type, q);
+  const first = res.data?.pages[0];
+  const items = res.data?.pages.flatMap((p) => p.items) ?? [];
+  const byType = first?.by_type ?? {};
+  const all = Object.values(byType).reduce((a, b) => a + b, 0);
+  const chips: [string, string, number][] = [
+    ["", "Todos", all],
+    ...Object.entries(byType)
+      .sort((a, b) => b[1] - a[1])
+      .map(([t, n]): [string, string, number] => [t, t, n]),
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm muted">
+        Projetos em que o parlamentar é autor ou coautor, com link para a ficha oficial de tramitação. Requerimentos e
+        pareceres não entram.{" "}
+        <Link to="/como-calculamos" className="underline">
+          Como calculamos
+        </Link>
+      </p>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">Buscar na ementa ou pelo número</span>
+        <input
+          className="input"
+          type="search"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Ex.: educação, 2036/2023"
+          autoComplete="off"
+        />
+      </label>
+      {all > 0 && (
+        <div role="tablist" aria-label="Filtrar por tipo" className="-mx-4 flex gap-2 overflow-x-auto px-4">
+          {chips.map(([value, label, n]) => (
+            <button
+              key={value}
+              role="tab"
+              aria-selected={type === value}
+              title={BILL_TYPE_LABEL[value]}
+              onClick={() => setType(value)}
+              className={`btn min-h-9 shrink-0 rounded-full px-4 ${type === value ? "bg-marca text-white" : "btn-secondary"}`}
+            >
+              {label} <span className="tabular-nums opacity-80">{n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {res.isLoading ? (
+        <Loading />
+      ) : res.error ? (
+        <ErrorBox error={res.error} />
+      ) : items.length === 0 ? (
+        <Empty title={q || type ? "Nenhum projeto com esses filtros" : "Nenhum projeto registrado na legislatura"} />
+      ) : (
+        <>
+          <p className="text-xs muted" aria-live="polite">
+            {first?.total} {first?.total === 1 ? "projeto" : "projetos"}
+          </p>
+          <ul className="flex flex-col gap-3">
+            {items.map((b) => (
+              <li key={b.id} className="card flex flex-col gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-semibold">{billLabel(b)}</span>
+                  <span className="text-xs muted">{BILL_TYPE_LABEL[b.type] ?? b.type}</span>
+                </div>
+                {b.plain_summary && (
+                  <p className="text-sm">
+                    {b.plain_summary}
+                    {b.plain_summary_ai && <span className="ml-1 text-xs muted">(resumo gerado por IA)</span>}
+                  </p>
+                )}
+                {b.official_summary && (
+                  <p className={b.plain_summary ? "text-xs muted" : "text-sm"}>
+                    {b.plain_summary ? "Ementa oficial: " : ""}
+                    {b.official_summary}
+                  </p>
+                )}
+                {b.url && (
+                  <a href={b.url} target="_blank" rel="noopener noreferrer" className="self-start text-sm text-marca underline">
+                    Ver ficha oficial e tramitação ↗<span className="sr-only"> (abre em nova aba)</span>
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <LoadMore hasNext={res.hasNextPage} loading={res.isFetchingNextPage} onClick={() => res.fetchNextPage()} />
     </div>
   );
 }
