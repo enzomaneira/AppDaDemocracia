@@ -1,0 +1,11 @@
+{
+  "name": "App da Democracia",
+  "short_name": "Democracia",
+  "description": "Acompanhe deputados e senadores com dados oficiais.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "lang": "pt-BR",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

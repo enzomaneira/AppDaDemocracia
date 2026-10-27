@@ -1,0 +1,49 @@
+# Ambiente de desenvolvimento: Postgres + API + frontend.
+#   docker compose up
+#   docker compose run --rm sync            # roda a sincronização diária uma vez
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mandato
+      POSTGRES_PASSWORD: mandato
+      POSTGRES_DB: mandato
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mandato"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment: &backend-env
+      DATABASE_URL: postgresql://mandato:mandato@postgres:5432/mandato
+      JWT_SECRET: dev-secret-troque-em-producao-0123456789
+      CORS_ORIGINS: '["http://localhost:5173"]'
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  sync:
+    build: ./backend
+    command: python -m ingestion.run_daily
+    environment:
+      <<: *backend-env
+      SYNC_DAYS_BACK: "7"
+    depends_on:
+      api: { condition: service_started }
+    profiles: [jobs]
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports: ["5173:5173"]
+    volumes: [./frontend:/app, /app/node_modules]
+    depends_on: [api]
+
+volumes:
+  pgdata:

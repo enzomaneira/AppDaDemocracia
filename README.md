@@ -1,0 +1,126 @@
+# App da Democracia
+
+O "Sofascore da política": o cidadão segue deputados federais e senadores e recebe, num só lugar,
+votações, presença, agenda e notícias de cada um, com link para a fonte oficial.
+
+Apartidário por construção: o app mostra dados oficiais e métricas com metodologia pública
+(página **Como calculamos**), sem nota, ranking ou selo de "bom político".
+
+## Estrutura
+
+```
+backend/            FastAPI (só lê do banco) + worker de ingestão diária
+  app/
+    main.py         app, CORS, rate limit, rotas /api/v1
+    core/           config, segurança (Argon2, JWT), logs JSON, rate limit
+    db/             engine e sessão (SQLAlchemy 2 async)
+    models/         usuários, dados políticos, notícias/feed/operação
+    schemas/        Pydantic (OpenAPI em /docs)
+    api/v1/         auth, me (conta/seguidos/feed), politicians, votes, news, compare, admin
+    services/       stats (métricas), feed (cursor), news_matching (notícia → político)
+  ingestion/
+    run_daily.py    entrypoint do cron diário
+    sources/        camara.py, senado.py, news_rss.py
+    jobs/           sync_politicians, sync_votes, sync_agenda, sync_bills,
+                    sync_expenses, sync_news, refresh_stats
+  alembic/          migrações
+  tests/            pytest
+frontend/           React 18 + Vite + TypeScript + Tailwind v4 + TanStack Query + Recharts
+  src/pages/        Feed, Buscar, Perfil, Votação, Notícias, Conta, Onboarding, Como calculamos
+  src/components/   PoliticianCard, VoteBadge, StatTile, AgendaList, FeedItemCard…
+  src/api/          cliente HTTP (refresh token automático) + hooks TanStack Query
+docker-compose.yml  Postgres + API + frontend para dev
+.github/workflows/  CI (ruff, pytest, migrações no Postgres, eslint, vitest, build)
+```
+
+## Rodando localmente
+
+### Com Docker
+
+```bash
+docker compose up
+docker compose run --rm sync
+```
+
+O segundo comando roda a sincronização uma vez para popular o banco. Depois abra
+http://localhost:5173 (API em http://localhost:8000/docs).
+
+### Sem Docker (SQLite)
+
+Sem `DATABASE_URL`, o backend usa SQLite em `backend/dev.db`, prático para desenvolver.
+Em produção use PostgreSQL 16 (as migrações criam `citext`, `pg_trgm` e o índice de busca por nome).
+
+```bash
+cd backend
+python -m venv .venv
+.venv/Scripts/pip install -e ".[dev]"      # Linux/macOS: .venv/bin/pip
+.venv/Scripts/alembic upgrade head
+.venv/Scripts/python -m ingestion.run_daily
+.venv/Scripts/uvicorn app.main:app --reload
+```
+
+Para uma carga inicial com mais histórico, use `SYNC_DAYS_BACK=30`. Para testar rápido,
+`SYNC_LIMIT=10` limita os parlamentares por casa. Também dá para rodar só alguns jobs:
+`python -m ingestion.run_daily votes stats`.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Testes
+
+```bash
+cd backend && .venv/Scripts/pytest --cov
+cd frontend && npm test
+```
+
+## Ingestão diária
+
+Um único processo (`python -m ingestion.run_daily`) roda os jobs em sequência e encerra:
+
+| Ordem | Job | Fonte |
+|---|---|---|
+| 1 | sync_politicians | Câmara `/deputados`, Senado `/senador/lista/atual` |
+| 2 | sync_votes | Câmara `/votacoes` (só Plenário) + votos + orientações; Senado `/votacao` |
+| 3 | sync_agenda | Câmara `/deputados/{id}/eventos` (próximos 14 dias) e presença em `/eventos/{id}/deputados` |
+| 4 | sync_bills | Câmara `/proposicoes?idDeputadoAutor=` |
+| 5 | sync_expenses | Câmara `Ano-{ano}.csv.zip`, Senado `despesa_ceaps_{ano}.csv` |
+| 6 | sync_news | RSS da Agência Câmara/Senado + Google News (só para políticos com seguidores) |
+| 7 | refresh_stats | recalcula `politician_stats` (legislatura atual e ano corrente) |
+
+Cada job é idempotente (upsert por `house + external_id`) e grava a execução em `ingestion_runs`.
+Se uma fonte falhar, os demais jobs seguem, e o app continua mostrando o último dado salvo com
+"atualizado em".
+
+## Deploy no Railway
+
+| Serviço | Root | Comando |
+|---|---|---|
+| postgres | plugin PostgreSQL | expõe `DATABASE_URL` |
+| api | `backend/` | Dockerfile (`alembic upgrade head && uvicorn …`), health check `/api/v1/health` |
+| sync-diario | `backend/` | `python -m ingestion.run_daily`, Cron Job `0 6 * * *` (03h em Brasília) |
+| web | `frontend/` | build `npm run build`, site estático de `dist/`, `VITE_API_URL` = domínio da api |
+
+Variáveis: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_MIN`, `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, `CORS_ORIGINS` (JSON, ex.: `["https://app.exemplo.com.br"]`),
+`NEWS_API_KEY` (opcional), `LLM_API_KEY` (P1).
+
+## Status do MVP
+
+Pronto (P0): conta (e-mail/senha, refresh token com rotação, rota `/auth/google` para ID token do
+Google), onboarding por UF, seguir/deixar de seguir, busca com filtros, feed por cursor, perfil com
+desempenho e média da casa, agenda, votações com orientação do partido, notícias, página de votação,
+exportação e exclusão de conta (LGPD), PWA instalável, rotas admin básicas e `/compare` (P1).
+
+Pendências conhecidas:
+
+- **Presença**: o formato do registro de presença e das ausências justificadas ainda precisa ser
+  conferido na documentação oficial (questão em aberto do projeto). Hoje a presença da Câmara vem de
+  `/eventos/{id}/deputados` nas sessões deliberativas do Plenário. Justificativas e a presença no
+  Senado ainda não são importadas.
+- **Relatoria** de proposições e **agenda do Senado** ainda não são importadas.
+- **Login com Google no frontend**: falta o botão do Google Identity Services (o backend já aceita o ID token).
+- **P1/P2**: notificações push/e-mail, resumos por IA, tela de comparação, temas, cards de compartilhamento e painel admin com interface.
+- **Admin**: para promover um usuário, defina `role = 'admin'` direto no banco.
