@@ -11,6 +11,7 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: { email: string; name: string; password: string; uf?: string; accept_terms: boolean }) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -43,6 +44,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [qc],
   );
 
+  // Os botões do Google ficam junto do aviso de termos; continuar = aceitar (só pesa no 1º acesso).
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      setTokens(
+        await api<TokenOut>("/auth/google", {
+          method: "POST",
+          body: JSON.stringify({ id_token: idToken, accept_terms: true }),
+        }),
+      );
+      await qc.invalidateQueries();
+    },
+    [qc],
+  );
+
   const logout = useCallback(async () => {
     try {
       const refresh_token = localStorage.getItem("dem.refresh");
@@ -61,9 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading: loggedIn && me.isLoading,
       login,
       register,
+      loginWithGoogle,
       logout,
     }),
-    [me.data, me.isLoading, loggedIn, login, register, logout],
+    [me.data, me.isLoading, loggedIn, login, register, loginWithGoogle, logout],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

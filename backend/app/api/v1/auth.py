@@ -1,6 +1,5 @@
 from datetime import UTC, datetime, timedelta
 
-import httpx
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import select
 
@@ -16,6 +15,11 @@ from app.core.security import (
 )
 from app.models import RefreshToken, User
 from app.schemas import GoogleIn, LoginIn, RefreshIn, RegisterIn, TokenOut
+from app.services.google_auth import (
+    GoogleTokenError,
+    GoogleUnavailableError,
+    verify_id_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 AUTH_LIMIT = get_settings().auth_rate_limit
@@ -103,23 +107,30 @@ async def logout(body: RefreshIn, db: DB) -> None:
 @router.post("/google", response_model=TokenOut)
 @limiter.limit(AUTH_LIMIT)
 async def google(request: Request, body: GoogleIn, db: DB) -> TokenOut:
-    """Recebe o ID token do Google Identity Services e valida no endpoint oficial."""
+    """Entrar com Google: valida o ID token e entra (ou cria a conta no primeiro acesso).
+
+    Quem já tem conta com o mesmo e-mail entra nela: o Google comprovou a posse do e-mail.
+    Conta nova exige o aceite dos termos, como no cadastro por e-mail (LGPD).
+    """
     s = get_settings()
     if not s.google_client_id:
         raise HTTPException(501, "Login com Google não configurado")
-    async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.get(
-            "https://oauth2.googleapis.com/tokeninfo", params={"id_token": body.id_token}
-        )
-    info = r.json() if r.status_code == 200 else {}
-    if info.get("aud") != s.google_client_id or info.get("email_verified") not in ("true", True):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token do Google inválido")
+    try:
+        identity = await verify_id_token(body.id_token, s.google_client_id)
+    except GoogleUnavailableError:
+        raise HTTPException(503, "Não foi possível falar com o Google. Tente de novo.") from None
+    except GoogleTokenError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Login com Google recusado") from None
 
-    user = await _active_user_by_email(db, info["email"])
+    user = await _active_user_by_email(db, identity.email)
     if not user:
+        if not body.accept_terms:
+            raise HTTPException(
+                400, "É preciso aceitar os termos de uso e a política de privacidade"
+            )
         user = User(
-            email=info["email"].lower(),
-            name=info.get("name") or info["email"].split("@")[0],
+            email=identity.email,
+            name=(identity.name or identity.email.split("@")[0])[:120],
             auth_provider="google",
         )
         db.add(user)

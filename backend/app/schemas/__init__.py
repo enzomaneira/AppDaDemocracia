@@ -42,7 +42,9 @@ class RefreshIn(BaseModel):
 
 
 class GoogleIn(BaseModel):
-    id_token: str
+    id_token: str = Field(min_length=10, max_length=4096)
+    # Exigido só quando o login cria a conta (primeiro acesso).
+    accept_terms: bool = False
 
 
 class TokenOut(BaseModel):

@@ -2,7 +2,49 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+import { GOOGLE_CLIENT_ID, GoogleButton } from "../auth/GoogleButton";
 import { UFS } from "../lib/ufs";
+
+/** Botão do Google + aviso de termos (o aviso vem antes do clique: o aceite é informado). */
+function GoogleLogin({ next, text }: { next: string; text: "signin_with" | "signup_with" }) {
+  const { loginWithGoogle } = useAuth();
+  const nav = useNavigate();
+  const [error, setError] = useState("");
+  if (!GOOGLE_CLIENT_ID) return null;
+
+  async function onCredential(idToken: string) {
+    setError("");
+    try {
+      await loginWithGoogle(idToken);
+      nav(next, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível entrar com o Google.");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <GoogleButton onCredential={onCredential} text={text} />
+      <p className="text-center text-xs muted">
+        Ao continuar com o Google, você aceita os termos de uso e a{" "}
+        <Link to="/privacidade" className="underline">
+          política de privacidade
+        </Link>
+        . Usamos só seu nome e e-mail.
+      </p>
+      {error && (
+        <p role="alert" className="text-sm text-voto-nao">
+          {error}
+        </p>
+      )}
+      <div className="flex items-center gap-3 text-xs muted" aria-hidden="true">
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+        ou com e-mail
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+      </div>
+    </div>
+  );
+}
 
 function Field(props: { label: string; children: React.ReactNode }) {
   return (
@@ -38,6 +80,7 @@ export function Login() {
   return (
     <form onSubmit={submit} className="mx-auto flex max-w-sm flex-col gap-4 py-6">
       <h1 className="text-2xl font-bold">Entrar</h1>
+      <GoogleLogin next={next} text="signin_with" />
       <Field label="E-mail">
         <input className="input" name="email" type="email" autoComplete="email" required />
       </Field>
@@ -92,6 +135,7 @@ export function Register() {
   return (
     <form onSubmit={submit} className="mx-auto flex max-w-sm flex-col gap-4 py-6">
       <h1 className="text-2xl font-bold">Criar conta</h1>
+      <GoogleLogin next="/comecar" text="signup_with" />
       <p className="text-sm muted">
         Coletamos só nome, e-mail e quem você segue. Sua lista de seguidos nunca é pública.
       </p>
