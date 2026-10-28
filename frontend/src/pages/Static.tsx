@@ -98,6 +98,14 @@ export function Privacy() {
           pública, não é compartilhada e só você tem acesso a ela.
         </p>
       </Section>
+      <Section title="Lista de espera e pesquisa">
+        <p>
+          Na lista de espera guardamos o e-mail (obrigatório), nome, estado e faixa etária (opcionais) e as respostas da
+          pesquisa. O e-mail serve só para avisar do lançamento; as respostas são analisadas de forma agregada, para
+          decidir o que construir. A pesquisa não pergunta partido, voto nem posição política. Para sair da lista ou
+          pedir a exclusão das suas respostas, escreva para o contato do app.
+        </p>
+      </Section>
       <Section title="Seus direitos">
         <p>
           Em <Link to="/conta" className="text-marca underline">Conta</Link> você pode exportar todos os seus dados ou

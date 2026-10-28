@@ -101,3 +101,18 @@ export async function api<T>(path: string, init: RequestInit = {}, retry = true)
   }
   return (r.status === 204 ? undefined : await r.json()) as T;
 }
+
+/** Baixa um arquivo autenticado (ex.: CSV do admin) e entrega ao navegador para salvar. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  if (!accessToken && readRefresh()) await refresh();
+  const r = await fetch(`${API_URL}/api/v1${path}`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+  if (!r.ok) throw new ApiError(r.status, "Não foi possível baixar o arquivo");
+  const url = URL.createObjectURL(await r.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

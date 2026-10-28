@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import delete, select
 
-from app.api.deps import DB, CurrentUser
+from app.api.deps import DB, CurrentUser, is_admin
 from app.models import FeedEvent, FeedType, Follow, Politician, RefreshToken
 from app.schemas import FeedItem, FollowOut, FollowPrefs, Page, UserOut, UserUpdate
 from app.services.feed import query_feed
@@ -15,9 +15,13 @@ from app.services.presenters import politician_summary
 router = APIRouter(prefix="/me", tags=["me"])
 
 
+def user_out(user) -> UserOut:
+    return UserOut.model_validate(user).model_copy(update={"is_admin": is_admin(user)})
+
+
 @router.get("", response_model=UserOut)
 async def get_me(user: CurrentUser) -> UserOut:
-    return UserOut.model_validate(user)
+    return user_out(user)
 
 
 @router.patch("", response_model=UserOut)
@@ -27,7 +31,7 @@ async def update_me(body: UserUpdate, user: CurrentUser, db: DB) -> UserOut:
     if body.uf is not None:
         user.uf = body.uf.upper()
     await db.commit()
-    return UserOut.model_validate(user)
+    return user_out(user)
 
 
 @router.delete("", status_code=204)

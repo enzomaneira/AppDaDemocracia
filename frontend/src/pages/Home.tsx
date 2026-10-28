@@ -38,6 +38,9 @@ function Welcome() {
         <Link to="/buscar" className="btn-secondary">
           Só navegar
         </Link>
+        <Link to="/lista" className="btn-secondary">
+          Entrar na lista de espera
+        </Link>
       </div>
       <ul className="grid gap-3 sm:grid-cols-3">
         {[

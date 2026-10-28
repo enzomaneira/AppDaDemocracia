@@ -18,7 +18,9 @@ import type {
   PoliticianSummary,
   PoliticianVote,
   Stats,
+  Survey,
   User,
+  WaitlistSummary,
   VoteDetail,
 } from "./types";
 
@@ -119,6 +121,19 @@ export const useCompareVotes = (a: string, b: string, period: string | undefined
       !!a && !!b && a !== b,
     ),
   );
+
+export const useSurvey = () =>
+  useQuery({ queryKey: ["survey"], queryFn: () => api<Survey>("/waitlist/survey"), staleTime: 60 * 60_000 });
+
+export const useWaitlistCount = () =>
+  useQuery({ queryKey: ["waitlist-count"], queryFn: () => api<{ total: number }>("/waitlist/count") });
+
+export const useWaitlistSummary = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["waitlist-summary"],
+    queryFn: () => api<WaitlistSummary>("/admin/waitlist/summary"),
+    enabled,
+  });
 
 export const useDataStatus = () =>
   useQuery({

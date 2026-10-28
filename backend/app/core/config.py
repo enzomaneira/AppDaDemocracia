@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     rate_limit: str = "120/minute"
     auth_rate_limit: str = "10/minute"
+    # E-mails com acesso de admin (separados por vírgula), além de quem tem role=admin.
+    admin_emails: str = ""
 
     # Ingestão
     camara_base_url: str = "https://dadosabertos.camara.leg.br/api/v2"

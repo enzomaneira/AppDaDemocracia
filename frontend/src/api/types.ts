@@ -32,6 +32,7 @@ export interface User {
   role: string;
   auth_provider: string;
   created_at: string;
+  is_admin: boolean;
 }
 
 export interface PoliticianSummary {
@@ -187,4 +188,34 @@ export interface BillsPage {
   next_cursor: string | null;
   total: number;
   by_type: Record<string, number>;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  text: string;
+  kind: "single" | "multi" | "text";
+  max: number | null;
+  max_length: number | null;
+  options: { id: string; label: string }[];
+}
+
+export interface Survey {
+  version: number;
+  questions: SurveyQuestion[];
+  age_ranges: { id: string; label: string }[];
+}
+
+export interface WaitlistSummary {
+  total: number;
+  questions: {
+    id: string;
+    text: string;
+    kind: string;
+    answered: number;
+    options: { id: string; label: string; count: number }[];
+  }[];
+  by_uf: Record<string, number>;
+  by_age: Record<string, number>;
+  by_source: Record<string, number>;
+  open_answers: { text: string; uf: string | null; created_at: string }[];
 }

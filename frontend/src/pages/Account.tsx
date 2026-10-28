@@ -46,6 +46,11 @@ export default function Account() {
           <Link to="/comecar" className="btn-secondary">
             Mudar estado
           </Link>
+          {user.is_admin && (
+            <Link to="/admin/lista" className="btn-secondary">
+              Resultados da lista de espera
+            </Link>
+          )}
           <button className="btn-secondary" onClick={() => logout().then(() => nav("/"))}>
             Sair
           </button>

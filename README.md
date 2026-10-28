@@ -143,6 +143,12 @@ Também prontos: **comparar parlamentares** (`/comparar`: métricas lado a lado,
 votações em comum; RF14) e a aba **Proposições** do perfil (`/politico/<slug>?aba=proposicoes`:
 projetos de autoria ou coautoria, com filtro por tipo, busca e link para a ficha oficial).
 
+**Lista de espera** (`/lista`): inscrição com pesquisa sobre o que a população precisa para
+acompanhar a política. As perguntas ficam só em `backend/app/services/survey.py` (a página e a
+validação saem dali). Resultados em `/admin/lista` (gráficos, respostas abertas e CSV), para quem
+tem `role = admin` ou está em `ADMIN_EMAILS` (e-mails separados por vírgula, no serviço Backend).
+Use `?ref=origem` nos links divulgados para saber de onde vêm as inscrições.
+
 Pendências conhecidas:
 
 - **Presença**: o formato do registro de presença e das ausências justificadas ainda precisa ser

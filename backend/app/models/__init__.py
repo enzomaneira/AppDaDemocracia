@@ -18,6 +18,7 @@ from app.models.politics import (
     VoteRecord,
 )
 from app.models.users import Follow, RefreshToken, User
+from app.models.waitlist import WaitlistEntry
 
 __all__ = [
     "AgendaEvent",
@@ -44,4 +45,5 @@ __all__ = [
     "PARTICIPATED_CHOICES",
     "VoteChoice",
     "VoteRecord",
+    "WaitlistEntry",
 ]

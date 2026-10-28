@@ -62,6 +62,7 @@ class UserOut(ORM):
     role: str
     auth_provider: str
     created_at: datetime
+    is_admin: bool = False
 
 
 class UserUpdate(BaseModel):
