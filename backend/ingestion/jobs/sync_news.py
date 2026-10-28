@@ -1,22 +1,92 @@
-"""6 · Lê RSS das últimas 24 h, vincula notícia a político e descarta duplicadas por URL."""
+"""6 · Notícias de todos os parlamentares em exercício, vinculadas com proteção a homônimos.
+
+Duas fontes:
+- RSS das agências da Câmara e do Senado: a notícia é vinculada a quem tiver nome + contexto
+  (cargo, partido ou UF) no título/resumo (regra geral de news_matching).
+- Google News, uma busca por parlamentar: nome exato + cargo no texto da matéria, e o nome
+  precisa aparecer no título. Nome de uma palavra ("Vermelho") exige também o contexto no
+  título e não pode estar colado a outro nome ("Matheus Vermelho"). Páginas de candidatura,
+  apuração e listas eleitorais são descartadas.
+
+Na primeira busca de cada parlamentar a janela é de 30 dias; depois, só os últimos dias.
+Guardamos só título, fonte, data e link (sem copiar a matéria). URLs repetidas viram uma
+notícia só, com todos os parlamentares citados.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
+from dataclasses import dataclass, field
 
 from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models import FeedType, Follow, NewsArticle, NewsMention, Politician
+from app.models import FeedType, NewsArticle, NewsMention, Politician
 from app.services.feed import add_event
-from app.services.news_matching import Candidate, match_article
+from app.services.news_matching import (
+    MIN_CONFIDENCE,
+    Candidate,
+    is_listing_noise,
+    match_article,
+    part_of_other_name,
+    query_confidence,
+    score,
+    single_word_name,
+)
 from ingestion.http import HttpClient
-from ingestion.jobs.common import tracked
+from ingestion.jobs.common import feed_worthy, tracked
 from ingestion.sources import news_rss
 
 log = logging.getLogger("ingestion.news")
+FIRST_WINDOW, DAILY_WINDOW = "30d", "2d"
+CHUNK = 500
+
+
+@dataclass
+class Found:
+    item: news_rss.RssItem
+    mentions: dict[uuid.UUID, float] = field(default_factory=dict)
+
+    def add(self, pid: uuid.UUID, conf: float) -> None:
+        self.mentions[pid] = max(conf, self.mentions.get(pid, 0.0))
+
+
+def collect(
+    general: list[news_rss.RssItem],
+    per_politician: list[tuple[Candidate, list[news_rss.RssItem]]],
+    candidates: list[Candidate],
+) -> dict[str, Found]:
+    """URL → notícia + {parlamentar: confiança}. Função pura, testável sem rede nem banco."""
+    found: dict[str, Found] = {}
+
+    def entry(item: news_rss.RssItem) -> Found:
+        return found.setdefault(item.url, Found(item))
+
+    for item in general:
+        for m in match_article(f"{item.title}. {item.snippet or ''}", candidates):
+            entry(item).add(m.politician_id, m.confidence)
+    for cand, items in per_politician:
+        for item in items:
+            if is_listing_noise(item.title):
+                continue
+            if single_word_name(cand):
+                # Nome de uma palavra: só com nome E contexto visíveis no título (regra estrita).
+                conf = score(item.title, cand)
+                if conf < MIN_CONFIDENCE or part_of_other_name(item.title, cand):
+                    continue
+            else:
+                conf = query_confidence(item.title, cand)
+                if conf is None:
+                    continue  # nome só no corpo da matéria: o título não mostraria o porquê
+            e = entry(item)
+            e.add(cand.politician_id, conf)
+            # Outros parlamentares citados no título também ganham o vínculo (regra geral).
+            for m in match_article(item.title, candidates):
+                e.add(m.politician_id, m.confidence)
+    return {url: f for url, f in found.items() if f.mentions}
 
 
 async def run() -> None:
@@ -29,49 +99,74 @@ async def run() -> None:
                       p.party.acronym if p.party else None, p.uf)
             for p in pols
         ]  # fmt: skip
-        # Google News só para quem tem seguidores, para não disparar ~600 buscas por dia.
-        followed = set((await db.execute(select(Follow.politician_id).distinct())).scalars())
-        urls = list(get_settings().news_feeds) + [
-            news_rss.google_news_url(p.parliamentary_name) for p in pols if p.id in followed
-        ]
+        with_news = set((await db.execute(select(NewsMention.politician_id).distinct())).scalars())
 
         async with HttpClient() as client:
 
-            async def safe_fetch(url: str):
+            async def safe_fetch(url: str) -> list[news_rss.RssItem]:
                 try:
                     return await news_rss.fetch(client, url)
                 except Exception as e:  # noqa: BLE001 — uma fonte fora não derruba as demais
                     log.warning("feed falhou %s: %s", url, e)
                     return []
 
-            batches = await asyncio.gather(*(safe_fetch(u) for u in urls))
+            async def per_pol(c: Candidate) -> tuple[Candidate, list[news_rss.RssItem]]:
+                when = DAILY_WINDOW if c.politician_id in with_news else FIRST_WINDOW
+                return c, await safe_fetch(
+                    news_rss.google_news_url(c.parliamentary_name, c.house, when)
+                )
 
-        seen: set[str] = set()
-        for item in (i for batch in batches for i in batch):
-            if item.url in seen:
-                continue
-            seen.add(item.url)
-            matches = match_article(f"{item.title}. {item.snippet or ''}", candidates)
-            if not matches:
-                continue
-            exists = (
-                await db.execute(select(NewsArticle.id).where(NewsArticle.url == item.url))
-            ).first()
-            if exists:
-                continue
+            general_batches, per_politician = await asyncio.gather(
+                asyncio.gather(*(safe_fetch(u) for u in get_settings().news_feeds)),
+                asyncio.gather(*(per_pol(c) for c in candidates)),
+            )
+
+        found = collect([i for b in general_batches for i in b], per_politician, candidates)
+        run_.items += await _save(db, found)
+
+
+async def _save(db, found: dict[str, Found]) -> int:
+    """Grava em lote: notícias novas, vínculos que faltam e itens de feed recentes."""
+    urls = list(found)
+    known: dict[str, uuid.UUID] = {}
+    for i in range(0, len(urls), CHUNK):
+        rows = await db.execute(
+            select(NewsArticle.url, NewsArticle.id).where(NewsArticle.url.in_(urls[i : i + CHUNK]))
+        )
+        known.update(rows.tuples().all())
+    linked: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    ids = list(known.values())
+    for i in range(0, len(ids), CHUNK):
+        rows = await db.execute(
+            select(NewsMention.article_id, NewsMention.politician_id).where(
+                NewsMention.article_id.in_(ids[i : i + CHUNK])
+            )
+        )
+        linked.update(rows.tuples().all())
+
+    new_links = 0
+    for n, (url, f) in enumerate(found.items(), 1):
+        art_id = known.get(url)
+        if art_id is None:
+            it = f.item
             art = NewsArticle(
-                url=item.url, title=item.title, snippet=item.snippet,
-                source_name=item.source_name, published_at=item.published_at,
-                image_url=item.image_url,
+                id=uuid.uuid4(), url=url, title=it.title, snippet=it.snippet,
+                source_name=it.source_name, published_at=it.published_at, image_url=it.image_url,
             )  # fmt: skip
             db.add(art)
-            await db.flush()
-            for m in matches:
-                db.add(NewsMention(article_id=art.id, politician_id=m.politician_id,
-                                   confidence=m.confidence))  # fmt: skip
+            art_id = known[url] = art.id
+        for pid, conf in f.mentions.items():
+            if (art_id, pid) in linked:
+                continue
+            linked.add((art_id, pid))
+            db.add(NewsMention(article_id=art_id, politician_id=pid, confidence=conf))
+            new_links += 1
+            if feed_worthy(f.item.published_at):
                 await add_event(
-                    db, m.politician_id, FeedType.news, art.id, item.published_at,
-                    {"title": item.title[:300], "source": item.source_name, "url": item.url},
+                    db, pid, FeedType.news, art_id, f.item.published_at,
+                    {"title": f.item.title[:300], "source": f.item.source_name, "url": url},
                 )  # fmt: skip
-            run_.items += 1
-        await db.commit()
+        if n % CHUNK == 0:
+            await db.commit()
+    await db.commit()
+    return new_links

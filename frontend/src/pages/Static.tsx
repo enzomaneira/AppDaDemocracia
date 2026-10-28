@@ -69,6 +69,17 @@ export function HowWeCalculate() {
           contexto confere (cargo, partido ou UF), para evitar homônimos. Exibimos apenas título, trecho curto, fonte e
           link para o veículo.
         </p>
+        <p>
+          Todo dia buscamos no Google Notícias o nome exato de cada deputado e senador junto com o cargo (“deputado” ou
+          “senador”), e lemos as agências de notícias da Câmara e do Senado. Para a notícia aparecer no perfil, o nome
+          também precisa estar no título: assim fica claro por que ela está ali.
+        </p>
+        <p>
+          Nomes de uma palavra só (por exemplo, apelidos ou sobrenomes) exigem também o cargo, o partido ou a UF no
+          título, e não valem quando estão colados a outro nome próprio. Páginas automáticas de candidatura, apuração e
+          listas de candidatos não entram. Se encontrar uma notícia vinculada à pessoa errada, avise: os vínculos podem
+          ser revistos.
+        </p>
       </Section>
     </article>
   );

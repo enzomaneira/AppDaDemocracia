@@ -29,9 +29,14 @@ class RssItem:
     image_url: str | None
 
 
-def google_news_url(query: str) -> str:
-    q = quote_plus(f'"{query}"')
-    return f"https://news.google.com/rss/search?q={q}+when:1d&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+ROLE_QUERY = {"camara": "(deputado OR deputada)", "senado": "(senador OR senadora)"}
+
+
+def google_news_url(name: str, house: str | None = None, when: str = "1d") -> str:
+    """Busca no Google News pelo nome exato e, se informada a casa, pelo cargo no texto."""
+    terms = f'"{name}" {ROLE_QUERY.get(house or "", "")} when:{when}'
+    q = quote_plus(" ".join(terms.split()))
+    return f"https://news.google.com/rss/search?q={q}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
 
 
 def clean_snippet(raw: str | None) -> str | None:
@@ -59,11 +64,19 @@ def parse_feed(content: bytes, default_source: str | None = None) -> list[RssIte
         for m in e.get("media_content", []) or []:
             image = m.get("url")
             break
+        title = html.unescape(e.get("title", "")).strip()
+        name = source or source_title
+        # Google News acrescenta " - Veículo" ao título e repete o título no resumo.
+        if name and title.endswith(f" - {name}"):
+            title = title[: -len(name) - 3].rstrip()
+        snippet = clean_snippet(e.get("summary"))
+        if snippet and snippet.startswith(title[:40]):
+            snippet = None
         out.append(
             RssItem(
                 url=link,
-                title=html.unescape(e.get("title", "")).strip(),
-                snippet=clean_snippet(e.get("summary")),
+                title=title,
+                snippet=snippet,
                 source_name=source or source_title,
                 published_at=published,
                 image_url=image,
