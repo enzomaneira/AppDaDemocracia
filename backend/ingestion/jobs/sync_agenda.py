@@ -14,8 +14,7 @@ from sqlalchemy import func, select
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models import AgendaEvent, Attendance, AttendanceStatus, FeedType, House, Session
-from app.services.feed import add_event
+from app.models import AgendaEvent, Attendance, AttendanceStatus, House, Session
 from ingestion.jobs.common import (
     date_chunks,
     in_exercise,
@@ -56,7 +55,7 @@ async def sync_agenda_camara(api: CamaraSource) -> None:
                     continue
                 organ = ", ".join(o.get("sigla", "") for o in e.get("orgaos") or []) or None
                 title = e.get("descricao") or e.get("descricaoTipo") or "Evento"
-                ev, created = await upsert(
+                await upsert(
                     db,
                     AgendaEvent,
                     {"house": House.camara, "external_id": str(e["id"]), "politician_id": p.id},
@@ -70,11 +69,7 @@ async def sync_agenda_camara(api: CamaraSource) -> None:
                         "status": e.get("situacao"),
                     },
                 )
-                if created and starts >= datetime.now(UTC):
-                    await add_event(
-                        db, p.id, FeedType.agenda, ev.id, starts,
-                        {"title": title[:300], "organ": organ, "starts_at": starts.isoformat()},
-                    )  # fmt: skip
+                # O item de feed sai depois, do banco (sync_feed), para todo evento da janela.
                 run.items += 1
         await db.commit()
 

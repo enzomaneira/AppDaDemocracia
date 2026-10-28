@@ -88,7 +88,8 @@ Um único processo (`python -m ingestion.run_daily`) roda os jobs em sequência 
 | 4 | sync_bills | Câmara `/proposicoes?idDeputadoAutor=` |
 | 5 | sync_expenses | Câmara `Ano-{ano}.csv.zip`, Senado `despesa_ceaps_{ano}.csv` |
 | 6 | sync_news | RSS da Agência Câmara/Senado + Google News por parlamentar (nome exato + cargo; nome no título) |
-| 7 | refresh_stats | recalcula `politician_stats` (legislatura atual e ano corrente) |
+| 7 | sync_feed | itens de feed de proposições (legislatura, pela data de apresentação) e agenda (30 dias atrás a 14 à frente), derivados do banco |
+| 8 | refresh_stats | recalcula `politician_stats` (legislatura atual e ano corrente) |
 
 A sincronização é **incremental**: votações e presença continuam a partir do último item gravado
 no banco (menos `SYNC_DAYS_BACK` dias de folga), então recessos longos ou dias sem rodar não

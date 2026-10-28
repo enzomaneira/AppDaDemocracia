@@ -26,6 +26,7 @@ from ingestion.jobs import (
     sync_agenda,
     sync_bills,
     sync_expenses,
+    sync_feed,
     sync_news,
     sync_politicians,
     sync_votes,
@@ -33,7 +34,7 @@ from ingestion.jobs import (
 from ingestion.sources.camara import CamaraSource
 from ingestion.sources.senado import SenadoSource
 
-ORDER = ["politicians", "votes", "agenda", "bills", "expenses", "news", "stats"]
+ORDER = ["politicians", "votes", "agenda", "bills", "expenses", "news", "feed", "stats"]
 
 
 async def main(selected: list[str]) -> None:
@@ -45,6 +46,7 @@ async def main(selected: list[str]) -> None:
         "bills": lambda: sync_bills.run(camara, senado),
         "expenses": lambda: sync_expenses.run(camara, senado),
         "news": sync_news.run,
+        "feed": sync_feed.run,
         "stats": refresh_stats.run,
     }
     try:

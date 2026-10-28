@@ -5,7 +5,7 @@ import { formatDateTime, relativeTime } from "../lib/format";
 import { Avatar } from "./PoliticianCard";
 import { VoteBadge } from "./VoteBadge";
 
-const TYPE_LABEL = { vote: "Votou", agenda: "Agenda", news: "Notícia", bill: "Nova proposição" } as const;
+const TYPE_LABEL = { vote: "Votou", agenda: "Agenda", news: "Notícia", bill: "Apresentou proposição" } as const;
 
 export function FeedItemCard({ item }: { item: FeedItem }) {
   const p = item.politician;
@@ -19,7 +19,7 @@ export function FeedItemCard({ item }: { item: FeedItem }) {
             {p.name}
           </Link>{" "}
           <span className="muted">
-            · {item.type === "bill" && pl.role === "relator" ? "Novo parecer como relator(a)" : TYPE_LABEL[item.type]} ·{" "}
+            · {TYPE_LABEL[item.type]} ·{" "}
             <time dateTime={item.occurred_at}>{relativeTime(item.occurred_at)}</time>
           </span>
         </p>

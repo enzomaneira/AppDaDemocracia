@@ -133,7 +133,7 @@ async def _save(db, found: dict[str, Found]) -> int:
         rows = await db.execute(
             select(NewsArticle.url, NewsArticle.id).where(NewsArticle.url.in_(urls[i : i + CHUNK]))
         )
-        known.update(rows.tuples().all())
+        known.update(rows.all())
     linked: set[tuple[uuid.UUID, uuid.UUID]] = set()
     ids = list(known.values())
     for i in range(0, len(ids), CHUNK):
@@ -142,7 +142,7 @@ async def _save(db, found: dict[str, Found]) -> int:
                 NewsMention.article_id.in_(ids[i : i + CHUNK])
             )
         )
-        linked.update(rows.tuples().all())
+        linked.update(rows.all())
 
     new_links = 0
     for n, (url, f) in enumerate(found.items(), 1):

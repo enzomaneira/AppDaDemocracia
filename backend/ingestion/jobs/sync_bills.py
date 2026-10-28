@@ -13,15 +13,14 @@ import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models import AuthorRole, Bill, BillAuthor, FeedType, House, Politician
-from app.services.feed import add_event
+from app.models import AuthorRole, Bill, BillAuthor, House, Politician
 from app.services.presenters import bill_url
 from app.services.stats import STATS_BILL_TYPES, legislature_start_year
-from ingestion.jobs.common import politician_index, tracked
+from ingestion.jobs.common import parse_dt, politician_index, tracked
 from ingestion.sources import senado as sen
 from ingestion.sources.camara import CamaraSource
 
@@ -34,8 +33,8 @@ def bill_label(bill: Bill) -> str:
     return f"{bill.type} {bill.number}/{bill.year}" if bill.number and bill.year else bill.type
 
 
-async def _window(db, house: House) -> tuple[date, bool, dict[str, Politician]]:
-    """(início, gera feed?, parlamentares a consultar) para a casa.
+async def _window(db, house: House) -> tuple[date, dict[str, Politician]]:
+    """(início, parlamentares a consultar) para a casa.
 
     A lista de proposições não traz uma data confiável para continuar de onde parou; sem
     histórico na casa, carrega a legislatura inteira.
@@ -55,12 +54,10 @@ async def _window(db, house: House) -> tuple[date, bool, dict[str, Politician]]:
         if has_bills
         else date(legislature_start_year(s.legislature), 2, 1)
     )
-    # Numa carga histórica, proposições antigas não viram item de feed.
-    to_feed = start >= today - timedelta(days=s.feed_max_age_days)
     pols = await politician_index(db, house)
     if has_bills and not s.sync_since:
         pols = {k: p for k, p in pols.items() if p.in_office}
-    return start, to_feed, pols
+    return start, pols
 
 
 async def _fetch_all(
@@ -76,18 +73,20 @@ async def _fetch_all(
     return await asyncio.gather(*(one(e) for e in pols))
 
 
-async def _save_bills(
-    db, house: House, pols, results: list[tuple[str, list[dict]]], to_feed: bool
-) -> int:
+async def _save_bills(db, house: House, pols, results: list[tuple[str, list[dict]]]) -> int:
     """Grava em lote: o que já existe é carregado uma vez, em vez de 2 consultas por item.
 
-    Cada item: {"external_id", "type", "number", "year", "official_summary"}.
+    Cada item: {"external_id", "type", "number", "year", "official_summary", "presented_at"}.
+    Os itens de feed saem depois, do banco (sync_feed), com a data de apresentação.
     """
-    bill_ids: dict[str, uuid.UUID] = dict(
-        (await db.execute(select(Bill.external_id, Bill.id).where(Bill.house == house)))
-        .tuples()
-        .all()
-    )
+    known = (
+        await db.execute(
+            select(Bill.external_id, Bill.id, Bill.presented_at).where(Bill.house == house)
+        )
+    ).all()
+    bill_ids: dict[str, uuid.UUID] = {ext: bid for ext, bid, _ in known}
+    undated = {bid for _, bid, when in known if when is None}
+    dates: dict[uuid.UUID, object] = {}  # projetos já gravados que ganham a data agora
     links = set(
         (
             await db.execute(
@@ -95,9 +94,7 @@ async def _save_bills(
                     BillAuthor.role == AuthorRole.autor
                 )
             )
-        )
-        .tuples()
-        .all()
+        ).all()
     )
     pending = n = 0
     for ext, items in results:
@@ -117,29 +114,29 @@ async def _save_bills(
                 db.add(bill)
                 bill_id = bill_ids[bext] = bill.id
                 pending += 1
+            elif bill_id in undated and it.get("presented_at"):
+                dates[bill_id] = it["presented_at"]
+                undated.discard(bill_id)
             if (bill_id, p.id) in links:
                 continue
             links.add((bill_id, p.id))
             db.add(BillAuthor(bill_id=bill_id, politician_id=p.id, role=AuthorRole.autor))
             pending += 1
             n += 1
-            if to_feed:
-                await add_event(
-                    db, p.id, FeedType.bill, bill_id, datetime.now(UTC),
-                    {"title": (it["official_summary"] or "")[:300],
-                     "bill": f"{it['type']} {it['number']}/{it['year']}",
-                     "url": bill_url(house, bext)},
-                )  # fmt: skip
             if pending >= COMMIT_EVERY:
                 await db.commit()
                 pending = 0
+    # Atualização em lote por chave primária (projetos carregados antes de existir a coluna).
+    rows = [{"id": bid, "presented_at": when} for bid, when in dates.items()]
+    for i in range(0, len(rows), COMMIT_EVERY):
+        await db.execute(update(Bill), rows[i : i + COMMIT_EVERY])
     await db.commit()
     return n
 
 
 async def sync_camara(api: CamaraSource) -> None:
     async with tracked("sync_bills", "camara") as run, SessionLocal() as db:
-        start, to_feed, pols = await _window(db, House.camara)
+        start, pols = await _window(db, House.camara)
 
         async def fetch(ext: str) -> list[dict]:
             # Filtra os tipos já na API: sem isso vêm dezenas de milhares de requerimentos.
@@ -150,17 +147,18 @@ async def sync_camara(api: CamaraSource) -> None:
                     "number": b.get("numero"),
                     "year": b.get("ano"),
                     "official_summary": b.get("ementa"),
+                    "presented_at": parse_dt(b.get("dataApresentacao")),
                 }
                 async for b in api.proposicoes_autor(ext, start, STATS_BILL_TYPES)
             ]
 
         results = await _fetch_all(pols, fetch)
-        run.items += await _save_bills(db, House.camara, pols, results, to_feed)
+        run.items += await _save_bills(db, House.camara, pols, results)
 
 
 async def sync_senado(api: sen.SenadoSource) -> None:
     async with tracked("sync_bills", "senado") as run, SessionLocal() as db:
-        start, to_feed, pols = await _window(db, House.senado)
+        start, pols = await _window(db, House.senado)
 
         async def fetch(ext: str) -> list[dict]:
             # /processo devolve tudo de uma vez; o tipo sai da identificação ("PL 2036/2023").
@@ -169,7 +167,7 @@ async def sync_senado(api: sen.SenadoSource) -> None:
             ]
 
         results = await _fetch_all(pols, fetch)
-        run.items += await _save_bills(db, House.senado, pols, results, to_feed)
+        run.items += await _save_bills(db, House.senado, pols, results)
 
 
 async def run(camara: CamaraSource, senado: sen.SenadoSource) -> None:

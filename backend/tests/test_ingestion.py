@@ -289,17 +289,25 @@ def test_senado_session_attendance():
 
 
 def test_parse_processo():
+    from datetime import UTC, datetime
+
     from ingestion.sources.senado import parse_processo
 
     assert parse_processo(
-        {"identificacao": "PL 2036/2023", "codigoMateria": 157013, "ementa": "Segurança escolar"}
+        {"identificacao": "PL 2036/2023", "codigoMateria": 157013, "ementa": "Segurança escolar",
+         "dataApresentacao": "2023-04-19"}
     ) == {
         "external_id": "157013",
         "type": "PL",
         "number": 2036,
         "year": 2023,
         "official_summary": "Segurança escolar",
-    }
+        # meio-dia de Brasília: a data não muda ao converter para UTC
+        "presented_at": datetime(2023, 4, 19, 15, tzinfo=UTC),
+    }  # fmt: skip
+    assert (
+        parse_processo({"identificacao": "PL 1/2024", "codigoMateria": 2})["presented_at"] is None
+    )
     assert parse_processo({"identificacao": "RQS 41/2023", "codigoMateria": 1})["type"] == "RQS"
     assert parse_processo({"identificacao": "Ofício", "codigoMateria": 1}) is None
 

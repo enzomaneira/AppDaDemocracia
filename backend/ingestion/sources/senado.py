@@ -12,8 +12,9 @@ from __future__ import annotations
 import csv
 import io
 import re
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.core.config import get_settings
 from app.services.news_matching import normalize
@@ -147,4 +148,16 @@ def parse_processo(item: dict) -> dict | None:
         "number": int(m.group(2)),
         "year": int(m.group(3)),
         "official_summary": item.get("ementa"),
+        "presented_at": _parse_date(item.get("dataApresentacao")),
     }
+
+
+def _parse_date(value: str | None):
+    """'2026-09-01' → datetime em UTC (meio-dia de Brasília, para não trocar de dia)."""
+    if not value:
+        return None
+    try:
+        d = datetime.fromisoformat(value[:10])
+    except ValueError:
+        return None
+    return d.replace(hour=12, tzinfo=ZoneInfo("America/Sao_Paulo")).astimezone(UTC)

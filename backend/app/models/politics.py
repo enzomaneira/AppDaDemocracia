@@ -167,6 +167,8 @@ class Bill(Base):
     plain_summary: Mapped[str | None] = mapped_column(Text)
     plain_summary_ai: Mapped[bool] = mapped_column(Boolean, default=False)
     url: Mapped[str | None] = mapped_column(String(500))
+    # Data de apresentação (fonte oficial); é a data do item "nova proposição" no feed.
+    presented_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class BillAuthor(Base):
