@@ -202,11 +202,20 @@ export interface SurveyQuestion {
 export interface Survey {
   version: number;
   questions: SurveyQuestion[];
-  age_ranges: { id: string; label: string }[];
 }
 
-export interface WaitlistSummary {
-  total: number;
+export interface MySurvey {
+  answers: Record<string, string[] | string>;
+  completed_at: string | null;
+  prompt: boolean;
+  remind: boolean;
+}
+
+export interface SurveySummary {
+  users: number;
+  responses: number;
+  dismissed: number;
+  response_rate: number | null;
   questions: {
     id: string;
     text: string;
@@ -215,7 +224,5 @@ export interface WaitlistSummary {
     options: { id: string; label: string; count: number }[];
   }[];
   by_uf: Record<string, number>;
-  by_age: Record<string, number>;
-  by_source: Record<string, number>;
   open_answers: { text: string; uf: string | null; created_at: string }[];
 }

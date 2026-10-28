@@ -17,8 +17,8 @@ from app.models.politics import (
     VoteChoice,
     VoteRecord,
 )
+from app.models.survey import SurveyResponse
 from app.models.users import Follow, RefreshToken, User
-from app.models.waitlist import WaitlistEntry
 
 __all__ = [
     "AgendaEvent",
@@ -40,10 +40,10 @@ __all__ = [
     "PoliticianStats",
     "RefreshToken",
     "Session",
+    "SurveyResponse",
     "User",
     "Vote",
     "PARTICIPATED_CHOICES",
     "VoteChoice",
     "VoteRecord",
-    "WaitlistEntry",
 ]

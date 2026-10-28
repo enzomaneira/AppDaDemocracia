@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import delete, select
 
 from app.api.deps import DB, CurrentUser, is_admin
-from app.models import FeedEvent, FeedType, Follow, Politician, RefreshToken
+from app.models import FeedEvent, FeedType, Follow, Politician, RefreshToken, SurveyResponse
 from app.schemas import FeedItem, FollowOut, FollowPrefs, Page, UserOut, UserUpdate
 from app.services.feed import query_feed
 from app.services.presenters import politician_summary
@@ -39,6 +39,7 @@ async def delete_me(user: CurrentUser, db: DB) -> None:
     """Exclusão de conta (LGPD): apaga seguidos e tokens e anonimiza o registro."""
     await db.execute(delete(Follow).where(Follow.user_id == user.id))
     await db.execute(delete(RefreshToken).where(RefreshToken.user_id == user.id))
+    await db.execute(delete(SurveyResponse).where(SurveyResponse.user_id == user.id))
     user.email = f"excluido-{user.id}@invalid"
     user.name = "Conta excluída"
     user.password_hash = None
@@ -55,6 +56,7 @@ async def export_me(user: CurrentUser, db: DB) -> dict:
         "exported_at": datetime.now(UTC).isoformat(),
         "user": UserOut.model_validate(user).model_dump(mode="json"),
         "follows": [f.model_dump(mode="json") for f in follows],
+        "survey": (survey.answers if (survey := await db.get(SurveyResponse, user.id)) else None),
     }
 
 

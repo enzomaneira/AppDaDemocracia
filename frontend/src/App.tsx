@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/States";
@@ -12,8 +12,8 @@ import Onboarding from "./pages/Onboarding";
 import Search from "./pages/Search";
 import { HowWeCalculate, NotFound, Privacy } from "./pages/Static";
 import Vote from "./pages/Vote";
-import Waitlist from "./pages/Waitlist";
-import WaitlistAdmin from "./pages/WaitlistAdmin";
+import SurveyAdmin from "./pages/SurveyAdmin";
+import SurveyPage from "./pages/SurveyPage";
 
 // O perfil carrega o Recharts; fica num chunk separado para o feed abrir rápido no celular.
 const Politician = lazy(() => import("./pages/Politician"));
@@ -35,8 +35,11 @@ export default function App() {
         <Route path="votacao/:id" element={<Vote />} />
         <Route path="noticias" element={<News />} />
         <Route path="comparar" element={<Compare />} />
-        <Route path="lista" element={<Waitlist />} />
-        <Route path="admin/lista" element={<WaitlistAdmin />} />
+        <Route path="pesquisa" element={<SurveyPage />} />
+        <Route path="admin/pesquisa" element={<SurveyAdmin />} />
+        {/* Endereços da antiga lista de espera continuam funcionando */}
+        <Route path="lista" element={<Navigate to="/pesquisa" replace />} />
+        <Route path="admin/lista" element={<Navigate to="/admin/pesquisa" replace />} />
         <Route path="conta" element={<Account />} />
         <Route path="entrar" element={<Login />} />
         <Route path="cadastro" element={<Register />} />

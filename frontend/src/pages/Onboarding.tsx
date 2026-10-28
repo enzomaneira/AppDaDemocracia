@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import { api } from "../api/client";
-import { useFollows, useSearch } from "../api/hooks";
+import { useFollows, useMySurvey, useSearch } from "../api/hooks";
 import { useAuth } from "../auth/AuthContext";
 import { PoliticianCard } from "../components/PoliticianCard";
 import { ErrorBox, LoadMore, Loading } from "../components/States";
@@ -15,6 +15,9 @@ export default function Onboarding() {
   const qc = useQueryClient();
   const [uf, setUf] = useState(user?.uf ?? "");
   const follows = useFollows(loggedIn);
+  const survey = useMySurvey(loggedIn);
+  // Próximo passo: a pesquisa (opcional, com "Agora não") para quem nunca respondeu.
+  const after = survey.data?.prompt ? "/pesquisa?next=/" : "/";
   const res = useSearch({ uf: uf || undefined });
 
   if (!loggedIn) return <Navigate to="/entrar" replace />;
@@ -58,8 +61,8 @@ export default function Onboarding() {
             <LoadMore hasNext={res.hasNextPage} loading={res.isFetchingNextPage} onClick={() => res.fetchNextPage()} />
           </>
         ))}
-      <Link to="/" className="btn-primary sticky bottom-20 sm:bottom-4">
-        {followed.size ? `Ver meu feed (${followed.size} seguidos)` : "Pular por agora"}
+      <Link to={after} className="btn-primary sticky bottom-20 sm:bottom-4">
+        {followed.size ? `Continuar (${followed.size} seguidos)` : "Pular por agora"}
       </Link>
     </div>
   );

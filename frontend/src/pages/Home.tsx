@@ -5,6 +5,7 @@ import { useFeed, useFollows } from "../api/hooks";
 import type { FeedType } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { FeedItemCard } from "../components/FeedItemCard";
+import { SurveyInvite } from "../components/SurveyInvite";
 import { Avatar } from "../components/PoliticianCard";
 import { Empty, ErrorBox, LoadMore, Loading, UpdatedAt } from "../components/States";
 
@@ -37,9 +38,6 @@ function Welcome() {
         </Link>
         <Link to="/buscar" className="btn-secondary">
           Só navegar
-        </Link>
-        <Link to="/lista" className="btn-secondary">
-          Entrar na lista de espera
         </Link>
       </div>
       <ul className="grid gap-3 sm:grid-cols-3">
@@ -79,6 +77,7 @@ function Feed() {
   const items = feed.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <div className="flex flex-col gap-4">
+      <SurveyInvite />
       <section aria-label="Seguindo">
         <h2 className="mb-2 text-sm font-semibold muted">Seguindo</h2>
         <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">

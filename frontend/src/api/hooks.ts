@@ -18,9 +18,10 @@ import type {
   PoliticianSummary,
   PoliticianVote,
   Stats,
+  MySurvey,
   Survey,
+  SurveySummary,
   User,
-  WaitlistSummary,
   VoteDetail,
 } from "./types";
 
@@ -123,17 +124,34 @@ export const useCompareVotes = (a: string, b: string, period: string | undefined
   );
 
 export const useSurvey = () =>
-  useQuery({ queryKey: ["survey"], queryFn: () => api<Survey>("/waitlist/survey"), staleTime: 60 * 60_000 });
+  useQuery({ queryKey: ["survey"], queryFn: () => api<Survey>("/survey"), staleTime: 60 * 60_000 });
 
-export const useWaitlistCount = () =>
-  useQuery({ queryKey: ["waitlist-count"], queryFn: () => api<{ total: number }>("/waitlist/count") });
+export const useMySurvey = (enabled: boolean) =>
+  useQuery({ queryKey: ["my-survey"], queryFn: () => api<MySurvey>("/me/survey"), enabled });
 
-export const useWaitlistSummary = (enabled: boolean) =>
+export const useSurveySummary = (enabled: boolean) =>
   useQuery({
-    queryKey: ["waitlist-summary"],
-    queryFn: () => api<WaitlistSummary>("/admin/waitlist/summary"),
+    queryKey: ["survey-summary"],
+    queryFn: () => api<SurveySummary>("/admin/survey/summary"),
     enabled,
   });
+
+export function useSurveyMutations() {
+  const qc = useQueryClient();
+  const done = (data: MySurvey) => qc.setQueryData(["my-survey"], data);
+  return {
+    answer: useMutation({
+      mutationFn: (answers: MySurvey["answers"]) =>
+        api<MySurvey>("/me/survey", { method: "PUT", body: JSON.stringify({ answers }) }),
+      onSuccess: done,
+    }),
+    dismiss: useMutation({
+      mutationFn: (reminder: boolean) =>
+        api<MySurvey>("/me/survey/dismiss", { method: "POST", body: JSON.stringify({ reminder }) }),
+      onSuccess: done,
+    }),
+  };
+}
 
 export const useDataStatus = () =>
   useQuery({

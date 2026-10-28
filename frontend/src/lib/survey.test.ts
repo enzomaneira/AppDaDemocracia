@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SurveyQuestion } from "../api/types";
-import { answeredCount, atLimit, isChosen, sourceFromUrl, toggleChoice } from "./waitlist";
+import { answeredCount, atLimit, isChosen, toggleChoice } from "./survey";
 
 const single: SurveyQuestion = {
   id: "frequencia",
@@ -43,9 +43,4 @@ describe("helpers", () => {
     expect(answeredCount({ frequencia: "nunca", temas: ["saude"], aberta: "oi" }, [single, multi, text])).toBe(2);
   });
 
-  it("lê a origem da visita com segurança", () => {
-    expect(sourceFromUrl("?ref=Instagram")).toBe("instagram");
-    expect(sourceFromUrl("?utm_source=news<script>")).toBe("newsscript");
-    expect(sourceFromUrl("")).toBeUndefined();
-  });
 });

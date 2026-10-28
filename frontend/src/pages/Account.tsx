@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { api, setTokens } from "../api/client";
-import { useFollowMutation, useFollows } from "../api/hooks";
+import { useFollowMutation, useFollows, useMySurvey } from "../api/hooks";
 import type { Follow } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Avatar } from "../components/PoliticianCard";
@@ -47,8 +47,8 @@ export default function Account() {
             Mudar estado
           </Link>
           {user.is_admin && (
-            <Link to="/admin/lista" className="btn-secondary">
-              Resultados da lista de espera
+            <Link to="/admin/pesquisa" className="btn-secondary">
+              Resultados da pesquisa
             </Link>
           )}
           <button className="btn-secondary" onClick={() => logout().then(() => nav("/"))}>
@@ -74,6 +74,8 @@ export default function Account() {
           <p className="text-sm muted">Você ainda não segue ninguém.</p>
         )}
       </section>
+
+      <SurveySection />
 
       <section className="card flex flex-col gap-3">
         <h2 className="font-semibold">Seus dados (LGPD)</h2>
@@ -139,5 +141,23 @@ function FollowRow({ f }: { f: Follow }) {
         </button>
       </fieldset>
     </li>
+  );
+}
+
+function SurveySection() {
+  const mine = useMySurvey(true);
+  const answered = !!mine.data?.completed_at;
+  return (
+    <section className="card flex flex-col gap-2">
+      <h2 className="font-semibold">Pesquisa</h2>
+      <p className="text-sm muted">
+        {answered
+          ? "Obrigado por responder! Você pode mudar as respostas quando quiser."
+          : "Conte o que faria você acompanhar mais a política (2 minutos, tudo opcional)."}
+      </p>
+      <Link to="/pesquisa?next=/conta" className="btn-secondary self-start">
+        {answered ? "Ver ou editar respostas" : "Responder a pesquisa"}
+      </Link>
+    </section>
   );
 }

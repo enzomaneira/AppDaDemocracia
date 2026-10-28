@@ -40,11 +40,3 @@ export function atLimit(answers: Answers, q: SurveyQuestion) {
 export function answeredCount(answers: Answers, questions: SurveyQuestion[]) {
   return questions.filter((q) => q.kind !== "text" && answers[q.id] && answers[q.id].length > 0).length;
 }
-
-/** Origem da visita (?ref=instagram ou utm_source), para saber o que traz inscrições. */
-export function sourceFromUrl(search: string): string | undefined {
-  const p = new URLSearchParams(search);
-  const raw = p.get("ref") ?? p.get("utm_source") ?? "";
-  const clean = raw.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 60);
-  return clean || undefined;
-}

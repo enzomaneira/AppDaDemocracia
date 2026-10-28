@@ -1,6 +1,9 @@
-"""Pesquisa da lista de espera: o que a população precisa para acompanhar a vida política.
+"""Pesquisa: o que a população precisa para acompanhar a vida política.
 
-Fonte única das perguntas: a página /lista monta o formulário a partir daqui e a API
+Opcional e ligada à conta (nunca é condição para usar o app). Convite logo após o cadastro;
+quem dispensar vê um lembrete uma única vez, alguns dias depois.
+
+Fonte única das perguntas: a página /pesquisa monta o formulário a partir daqui e a API
 valida as respostas contra esta definição. Para mudar uma pergunta, edite só este arquivo.
 Os ids (de pergunta e de opção) são o que fica gravado; mude o texto à vontade, mas não
 reaproveite um id com outro sentido, senão o resumo mistura respostas diferentes.
@@ -10,6 +13,7 @@ Por LGPD, a pesquisa não pergunta partido, voto ou posição política.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any
 
 SURVEY_VERSION = 1
@@ -128,19 +132,23 @@ QUESTIONS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "idade",
+        "text": "Qual a sua faixa etária?",
+        "kind": "single",
+        "options": [
+            ("16-24", "16 a 24 anos"),
+            ("25-34", "25 a 34 anos"),
+            ("35-44", "35 a 44 anos"),
+            ("45-59", "45 a 59 anos"),
+            ("60+", "60 anos ou mais"),
+        ],
+    },
+    {
         "id": "aberta",
         "text": "O que faria você acompanhar mais a política? (opcional)",
         "kind": "text",
         "max_length": 500,
     },
-]
-
-AGE_RANGES = [
-    ("16-24", "16 a 24 anos"),
-    ("25-34", "25 a 34 anos"),
-    ("35-44", "35 a 44 anos"),
-    ("45-59", "45 a 59 anos"),
-    ("60+", "60 anos ou mais"),
 ]
 
 _BY_ID = {q["id"]: q for q in QUESTIONS}
@@ -165,7 +173,6 @@ def public_survey() -> dict[str, Any]:
             }
             for q in QUESTIONS
         ],
-        "age_ranges": [{"id": aid, "label": label} for aid, label in AGE_RANGES],
     }
 
 
@@ -228,3 +235,26 @@ def summarize(answers_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return result
+
+
+REMIND_AFTER_DAYS = 3
+
+
+def prompt_state(
+    exists: bool,
+    completed_at: datetime | None,
+    dismissed_at: datetime | None,
+    reminded_at: datetime | None,
+    now: datetime,
+) -> dict[str, bool]:
+    """Quando convidar a responder.
+
+    ``prompt``: primeira vez (nunca respondeu nem dispensou).
+    ``remind``: uma única vez, REMIND_AFTER_DAYS dias depois do "Agora não".
+    """
+    if completed_at is not None:
+        return {"prompt": False, "remind": False}
+    if not exists or dismissed_at is None:
+        return {"prompt": True, "remind": False}
+    due = now - dismissed_at >= timedelta(days=REMIND_AFTER_DAYS)
+    return {"prompt": False, "remind": due and reminded_at is None}

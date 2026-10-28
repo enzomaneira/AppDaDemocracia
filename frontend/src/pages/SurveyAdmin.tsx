@@ -1,20 +1,20 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 import { downloadFile } from "../api/client";
-import { useWaitlistSummary } from "../api/hooks";
-import type { WaitlistSummary } from "../api/types";
+import { useSurveySummary } from "../api/hooks";
+import type { SurveySummary } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Empty, ErrorBox, Loading } from "../components/States";
 import { relativeTime } from "../lib/format";
 
-/** Resultados da lista de espera (só admin): o que a população disse que precisa. */
-export default function WaitlistAdmin() {
+/** Resultados da pesquisa (só admin): o que a população disse que precisa. */
+export default function SurveyAdmin() {
   const { user, loggedIn, loading } = useAuth();
-  const summary = useWaitlistSummary(!!user?.is_admin);
+  const summary = useSurveySummary(!!user?.is_admin);
   const [error, setError] = useState("");
 
-  if (!loggedIn) return <Navigate to="/entrar" replace state={{ next: "/admin/lista" }} />;
+  if (!loggedIn) return <Navigate to="/entrar" replace state={{ next: "/admin/pesquisa" }} />;
   if (loading || !user) return <Loading />;
   if (!user.is_admin) return <Empty title="Acesso restrito a administradores" />;
   if (summary.isLoading) return <Loading />;
@@ -25,23 +25,20 @@ export default function WaitlistAdmin() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Lista de espera</h1>
+          <h1 className="text-2xl font-bold">Resultados da pesquisa</h1>
           <p className="text-sm muted">
-            <span className="text-3xl font-bold tabular-nums text-slate-900 dark:text-slate-100">{s.total}</span>{" "}
-            {s.total === 1 ? "inscrição" : "inscrições"} ·{" "}
-            <Link to="/lista" className="underline">
-              ver a página pública
-            </Link>
+            <span className="text-3xl font-bold tabular-nums text-slate-900 dark:text-slate-100">{s.responses}</span>{" "}
+            {s.responses === 1 ? "resposta" : "respostas"} de {s.users} {s.users === 1 ? "conta" : "contas"}
+            {s.response_rate != null && <> · taxa de resposta {s.response_rate.toLocaleString("pt-BR")}%</>} ·{" "}
+            {s.dismissed} {s.dismissed === 1 ? "dispensou" : "dispensaram"}
           </p>
         </div>
         <button
           type="button"
           className="btn-secondary"
-          onClick={() =>
-            downloadFile("/admin/waitlist/export.csv", "lista-de-espera.csv").catch((e: Error) => setError(e.message))
-          }
+          onClick={() => downloadFile("/admin/survey/export.csv", "pesquisa.csv").catch((e: Error) => setError(e.message))}
         >
-          Baixar CSV
+          Baixar CSV (anônimo)
         </button>
       </div>
       {error && (
@@ -50,15 +47,13 @@ export default function WaitlistAdmin() {
         </p>
       )}
 
-      {s.total === 0 ? (
-        <Empty title="Ninguém se inscreveu ainda">Compartilhe a página /lista para começar a receber respostas.</Empty>
+      {s.responses === 0 ? (
+        <Empty title="Ninguém respondeu ainda">
+          A pesquisa aparece para quem cria conta, no feed e em Conta. Os resultados chegam aqui.
+        </Empty>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Breakdown title="Origem" data={s.by_source} total={s.total} />
-            <Breakdown title="Estado" data={s.by_uf} total={s.total} limit={8} />
-            <Breakdown title="Idade" data={s.by_age} total={s.total} />
-          </div>
+          <Breakdown title="Estado de quem respondeu" data={s.by_uf} total={s.responses} limit={10} />
           {s.questions.map((q) => (
             <QuestionResult key={q.id} q={q} />
           ))}
@@ -92,7 +87,7 @@ function Breakdown({ title, data, total, limit = 6 }: { title: string; data: Rec
   );
 }
 
-function QuestionResult({ q }: { q: WaitlistSummary["questions"][number] }) {
+function QuestionResult({ q }: { q: SurveySummary["questions"][number] }) {
   const options = [...q.options].sort((a, b) => b.count - a.count);
   return (
     <section className="card flex flex-col gap-3" aria-label={q.text}>
@@ -125,7 +120,7 @@ function QuestionResult({ q }: { q: WaitlistSummary["questions"][number] }) {
   );
 }
 
-function OpenAnswers({ items }: { items: WaitlistSummary["open_answers"] }) {
+function OpenAnswers({ items }: { items: SurveySummary["open_answers"] }) {
   return (
     <section className="card flex flex-col gap-3">
       <h2 className="font-semibold">O que faria a pessoa acompanhar mais a política</h2>

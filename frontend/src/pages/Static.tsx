@@ -98,12 +98,12 @@ export function Privacy() {
           pública, não é compartilhada e só você tem acesso a ela.
         </p>
       </Section>
-      <Section title="Lista de espera e pesquisa">
+      <Section title="Pesquisa">
         <p>
-          Na lista de espera guardamos o e-mail (obrigatório), nome, estado e faixa etária (opcionais) e as respostas da
-          pesquisa. O e-mail serve só para avisar do lançamento; as respostas são analisadas de forma agregada, para
-          decidir o que construir. A pesquisa não pergunta partido, voto nem posição política. Para sair da lista ou
-          pedir a exclusão das suas respostas, escreva para o contato do app.
+          A pesquisa do app é opcional e nunca é condição para usar o app. As respostas ficam ligadas à sua conta, para
+          você poder revê-las e editá-las, e são analisadas só de forma agregada, para decidir o que construir: quem
+          analisa vê totais e respostas anônimas, sem nome nem e-mail. A pesquisa não pergunta partido, voto nem
+          posição política. As respostas entram na exportação dos seus dados e são apagadas junto com a conta.
         </p>
       </Section>
       <Section title="Seus direitos">
