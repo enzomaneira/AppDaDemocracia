@@ -80,6 +80,14 @@ def orientation_by_party(orientacoes: list[dict]) -> dict[str, str | None]:
     return out
 
 
+def government_orientation(orientacoes: list[dict]) -> str | None:
+    """Orientação do líder do governo ("Governo" em siglaPartidoBloco); só a Câmara publica."""
+    for o in orientacoes:
+        if (o.get("siglaPartidoBloco") or "").strip().upper() == "GOVERNO":
+            return normalize_orientation(o.get("orientacaoVoto"))
+    return None
+
+
 def parse_identificacao(value: str | None) -> tuple[str | None, int | None, int | None]:
     """'PEC 81/2015' → ('PEC', 81, 2015)."""
     m = re.match(r"\s*([A-Za-z]+)\s+(\d+)/(\d{4})", value or "")
@@ -99,6 +107,7 @@ async def _save_vote(
     choices: dict[str, tuple[str, str | None]],
     pols: dict[str, Politician],
     listed: set[str] | None = None,
+    government: str | None = None,
 ) -> int:
     """Grava votação + votos nominais. `choices`: external_id → (escolha, orientação).
 
@@ -124,6 +133,7 @@ async def _save_vote(
             "yes_count": counts["sim"],
             "no_count": counts["nao"],
             "abstention_count": counts["abstencao"],
+            "government_orientation": government,
         },
     )
     if listed is None:
@@ -246,8 +256,9 @@ async def _save_camara_vote(db, item, pols: dict[str, Politician]) -> int:
         else ("Rejeitada" if v.get("aprovacao") == 0 else None)
     )
     return await _save_vote(
-        db, House.camara, vid, voted_at, v.get("descricao"), result, bill, choices, pols
-    )
+        db, House.camara, vid, voted_at, v.get("descricao"), result, bill, choices, pols,
+        government=government_orientation(orient),
+    )  # fmt: skip
 
 
 async def sync_senado(api: sen.SenadoSource) -> None:

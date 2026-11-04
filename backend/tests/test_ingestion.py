@@ -4,7 +4,12 @@ from decimal import Decimal
 from ingestion.jobs.common import slugify
 from ingestion.jobs.sync_bills import bill_label
 from ingestion.jobs.sync_expenses import parse_brl
-from ingestion.jobs.sync_votes import orientation_by_party, parse_identificacao, senado_result
+from ingestion.jobs.sync_votes import (
+    government_orientation,
+    orientation_by_party,
+    parse_identificacao,
+    senado_result,
+)
 from ingestion.sources import camara, senado
 from ingestion.sources.news_rss import clean_snippet, parse_feed
 
@@ -27,6 +32,18 @@ def test_orientation_party_beats_federation():
     assert out["PV"] == "sim"  # orientação do próprio partido prevalece
     assert out["PL"] == "obstrucao"
     assert "GOVERNO" not in out
+
+
+def test_government_orientation_comes_from_the_governo_entry():
+    orient = [
+        {"orientacaoVoto": "Não", "codTipoLideranca": "P", "siglaPartidoBloco": "PL"},
+        {"orientacaoVoto": "Sim", "codTipoLideranca": "G", "siglaPartidoBloco": "Governo"},
+    ]
+    assert government_orientation(orient) == "sim"
+    assert government_orientation(orient[:1]) is None
+    assert government_orientation([]) is None
+    liberado = [{"orientacaoVoto": "Liberado", "siglaPartidoBloco": "Governo"}]
+    assert government_orientation(liberado) == "liberado"  # filtrado no cálculo, não na gravação
 
 
 def test_labels_and_senado_result():

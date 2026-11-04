@@ -3,6 +3,8 @@
 Regras de negócio (ver página "Como calculamos"):
 - Presença = sessões deliberativas com presença ÷ sessões deliberativas do período.
 - Ausências justificadas aparecem separadas e nunca são somadas às faltas.
+- Fidelidade ao partido / alinhamento com o governo = votos Sim/Não iguais à orientação do
+  líder ÷ votos Sim/Não em votações que tiveram orientação Sim/Não. "Liberado" não é posição.
 - Toda métrica vem acompanhada do período e da média da casa.
 """
 
@@ -13,7 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import and_, case, delete, func, select
+from sqlalchemy import String, and_, case, cast, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -29,6 +31,7 @@ from app.models import (
     PoliticianStats,
     Session,
     Vote,
+    VoteChoice,
     VoteRecord,
 )
 
@@ -77,6 +80,17 @@ def attendance_rate(present: int, total: int) -> float | None:
     return round(present / total * 100, 2)
 
 
+# Abaixo disso a taxa oscila demais (1 voto igual = 100%) e não é exibida.
+MIN_ALIGNMENT_VOTES = 10
+
+
+def alignment_rate(aligned: int, compared: int) -> float | None:
+    """Parcela dos votos comparáveis que seguiram a orientação (0–100), ou None sem amostra."""
+    if compared < MIN_ALIGNMENT_VOTES:
+        return None
+    return round(aligned / compared * 100, 2)
+
+
 def unjustified_absences(total: int, present: int, justified: int) -> int:
     return max(total - present - justified, 0)
 
@@ -90,12 +104,44 @@ def house_average(values: list[float | int | Decimal | None]) -> float | None:
 
 def build_house_averages(rows: list[dict]) -> dict[House, dict[str, float | None]]:
     """Média da casa por métrica, calculada só entre parlamentares da mesma casa."""
-    metrics = ["attendance_rate", "votes_participated", "bills_authored", "expenses_total"]
+    metrics = [
+        "attendance_rate",
+        "votes_participated",
+        "bills_authored",
+        "expenses_total",
+        "party_alignment_rate",
+        "government_alignment_rate",
+    ]
     out: dict[House, dict[str, float | None]] = {}
     for house in House:
         same = [r for r in rows if r["house"] == house]
-        out[house] = {m: house_average([r[m] for r in same]) for m in metrics}
+        out[house] = {m: house_average([r.get(m) for r in same]) for m in metrics}
     return out
+
+
+_POSITIONAL = (VoteChoice.sim, VoteChoice.nao)
+_POSITIONAL_VALUES = tuple(c.value for c in _POSITIONAL)
+
+
+async def _alignment(db: AsyncSession, in_period_vote, orientation_col) -> dict:
+    """politician_id → (votos Sim/Não comparáveis, iguais à orientação) para uma coluna."""
+    q = (
+        select(
+            VoteRecord.politician_id,
+            func.count().label("compared"),
+            func.sum(case((cast(VoteRecord.choice, String) == orientation_col, 1), else_=0)).label(
+                "aligned"
+            ),
+        )
+        .join(Vote, Vote.id == VoteRecord.vote_id)
+        .where(
+            in_period_vote,
+            VoteRecord.choice.in_(_POSITIONAL),
+            orientation_col.in_(_POSITIONAL_VALUES),
+        )
+        .group_by(VoteRecord.politician_id)
+    )
+    return {r.politician_id: (r.compared, int(r.aligned or 0)) for r in (await db.execute(q)).all()}
 
 
 async def compute_all(db: AsyncSession, period: Period) -> int:
@@ -131,6 +177,9 @@ async def compute_all(db: AsyncSession, period: Period) -> int:
     )
     votes = {r.politician_id: r for r in (await db.execute(votes_q)).all()}
 
+    party_al = await _alignment(db, in_period_vote, VoteRecord.party_orientation)
+    gov_al = await _alignment(db, in_period_vote, Vote.government_orientation)
+
     # Só projetos contam como proposição apresentada (não requerimentos, pareceres etc.).
     bills_q = (
         select(BillAuthor.politician_id, BillAuthor.role, func.count())
@@ -160,6 +209,8 @@ async def compute_all(db: AsyncSession, period: Period) -> int:
         total, present, justified = (
             (a.total, int(a.present or 0), int(a.justified or 0)) if a else (0, 0, 0)
         )
+        p_cmp, p_ok = party_al.get(pid, (0, 0))
+        g_cmp, g_ok = gov_al.get(pid, (0, 0))
         rows.append(
             {
                 "politician_id": pid,
@@ -172,6 +223,10 @@ async def compute_all(db: AsyncSession, period: Period) -> int:
                 "votes_participated": int(v.part or 0) if v else 0,
                 "bills_authored": bills.get(pid, {}).get(AuthorRole.autor, 0),
                 "bills_reported": bills.get(pid, {}).get(AuthorRole.relator, 0),
+                "party_alignment_rate": alignment_rate(p_ok, p_cmp),
+                "party_votes_compared": p_cmp,
+                "government_alignment_rate": alignment_rate(g_ok, g_cmp),
+                "government_votes_compared": g_cmp,
                 "expenses_total": Decimal(expenses.get(pid) or 0),
             }
         )

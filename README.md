@@ -143,6 +143,11 @@ Também prontos: **comparar parlamentares** (`/comparar`: métricas lado a lado,
 votações em comum; RF14) e a aba **Proposições** do perfil (`/politico/<slug>?aba=proposicoes`:
 projetos de autoria ou coautoria, com filtro por tipo, busca e link para a ficha oficial).
 
+**Alinhamento** (perfil e comparação): *votos alinhados ao partido* e *ao governo* = votos Sim/Não iguais
+à orientação do líder ÷ votos Sim/Não em votações com orientação Sim/Não. A orientação do governo vem do
+item "Governo" de `/votacoes/{id}/orientacoes` (só a Câmara; guardada em `votes.government_orientation`,
+migração 0007). Só aparece com pelo menos 10 votos comparáveis. Números de comportamento, não nota. Metodologia em "Como calculamos".
+
 **Pesquisa** (`/pesquisa`): opcional, ligada à conta, sobre o que a população precisa para
 acompanhar a política. Convite logo após o onboarding (com "Agora não"), cartão no feed para quem
 entra pelo Google e lembrete uma única vez 3 dias depois de dispensar; sempre disponível em Conta.

@@ -4,6 +4,7 @@ import pytest
 
 from app.models import House, PoliticianStats
 from app.services.stats import (
+    alignment_rate,
     attendance_rate,
     build_house_averages,
     compute_all,
@@ -125,3 +126,74 @@ async def test_senado_justified_absence_and_secret_vote(db, seed):
     assert float(st.attendance_rate) == 50.0
     # voto secreto e "sim" contam; presente sem voto e ausência justificada, não
     assert (st.votes_participated, st.votes_total) == (2, 4)
+
+
+def test_alignment_rate():
+    assert alignment_rate(8, 10) == 80.0
+    assert alignment_rate(0, 10) == 0.0
+    assert alignment_rate(9, 9) is None  # amostra abaixo do mínimo
+    assert alignment_rate(0, 0) is None
+
+
+async def _add_votes(db, seed, n, *, a, b, party=None, government=None):
+    """Adiciona n votações; a/b são as escolhas (VoteChoice) de Ana e Bruno."""
+    from sqlalchemy import select
+
+    from app.models import Vote, VoteRecord
+
+    when = (await db.execute(select(Vote))).scalars().first().voted_at
+    for i in range(n):
+        v = Vote(
+            house=House.camara,
+            external_id=f"extra-{a}-{b}-{i}",
+            voted_at=when,
+            government_orientation=government,
+        )
+        db.add(v)
+        await db.flush()
+        for pol, choice in ((seed["a"], a), (seed["b"], b)):
+            db.add(
+                VoteRecord(
+                    vote_id=v.id, politician_id=pol.id, choice=choice, party_orientation=party
+                )
+            )
+    await db.commit()
+
+
+async def test_party_alignment_needs_minimum_sample(db, seed):
+    # seed tem 1 votação comparável: abaixo do mínimo, a taxa não é exibida (mas a contagem sim)
+    await compute_all(db, parse_period("2026", 57))
+    ana = await db.get(PoliticianStats, (seed["a"].id, "2026"))
+    assert ana.party_alignment_rate is None and ana.party_votes_compared == 1
+    assert ana.government_alignment_rate is None and ana.government_votes_compared == 0
+
+
+async def test_party_alignment(db, seed):
+    from app.models import VoteChoice
+
+    # +9 votações com orientação "sim": Ana sempre Sim, Bruno sempre Não → 10 no total com o seed
+    await _add_votes(db, seed, 9, a=VoteChoice.sim, b=VoteChoice.nao, party="sim")
+    await compute_all(db, parse_period("2026", 57))
+    ana = await db.get(PoliticianStats, (seed["a"].id, "2026"))
+    bruno = await db.get(PoliticianStats, (seed["b"].id, "2026"))
+    assert (float(ana.party_alignment_rate), ana.party_votes_compared) == (100.0, 10)
+    assert (float(bruno.party_alignment_rate), bruno.party_votes_compared) == (0.0, 10)
+
+
+async def test_government_alignment_ignores_liberado_and_non_positional_votes(db, seed):
+    from app.models import VoteChoice
+
+    # 10 votações em que o governo orienta "nao": Ana (Sim) diverge, Bruno (Não) acompanha
+    await _add_votes(db, seed, 10, a=VoteChoice.sim, b=VoteChoice.nao, government="nao")
+    # "liberado" e voto de abstenção não entram na comparação
+    await _add_votes(db, seed, 3, a=VoteChoice.sim, b=VoteChoice.abstencao, government="liberado")
+    await _add_votes(db, seed, 3, a=VoteChoice.abstencao, b=VoteChoice.abstencao, government="sim")
+    await compute_all(db, parse_period("2026", 57))
+    ana = await db.get(PoliticianStats, (seed["a"].id, "2026"))
+    bruno = await db.get(PoliticianStats, (seed["b"].id, "2026"))
+    assert (float(ana.government_alignment_rate), ana.government_votes_compared) == (0.0, 10)
+    assert (float(bruno.government_alignment_rate), bruno.government_votes_compared) == (
+        100.0,
+        10,
+    )
+    assert ana.house_avg["government_alignment_rate"] == 50.0

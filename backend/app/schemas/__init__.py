@@ -112,6 +112,10 @@ class StatsOut(BaseModel):
     bills_authored: Metric
     bills_reported: int
     expenses_total: Metric
+    party_alignment_rate: Metric
+    party_votes_compared: int
+    government_alignment_rate: Metric
+    government_votes_compared: int
     computed_at: datetime | None
     methodology_url: str = "/como-calculamos"
 

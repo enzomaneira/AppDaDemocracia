@@ -43,6 +43,22 @@ export function HowWeCalculate() {
           orientação do próprio partido; se ela não existir, a da federação.
         </p>
       </Section>
+      <Section title="Alinhamento ao partido e ao governo">
+        <p>
+          <strong>
+            Alinhamento = votos Sim ou Não iguais à orientação do líder ÷ votos Sim ou Não em votações que tiveram
+            orientação Sim ou Não.
+          </strong>{" "}
+          Orientações “Liberado”, abstenção e obstrução não são comparadas, nem votos de abstenção ou ausências do
+          parlamentar. A orientação do partido segue a regra acima; a do governo é a do líder do governo na Câmara, a
+          única casa que a publica (no Senado a métrica fica vazia).
+        </p>
+        <p>
+          São números sobre comportamento nas votações, não uma nota: votar diferente da orientação não é bom nem ruim em
+          si. Com poucas votações comparáveis o percentual oscila muito: abaixo de 10 votos comparáveis a taxa não é
+          exibida. Mostramos sempre o total de votos usado no cálculo.
+        </p>
+      </Section>
       <Section title="Proposições">
         <p>
           Projetos em que o parlamentar consta como autor ou coautor no cadastro oficial: projetos de lei (PL), de lei

@@ -197,6 +197,8 @@ class Vote(Base):
     yes_count: Mapped[int] = mapped_column(Integer, default=0)
     no_count: Mapped[int] = mapped_column(Integer, default=0)
     abstention_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Orientação do líder do governo (só a Câmara publica); mesmo vocabulário de party_orientation.
+    government_orientation: Mapped[str | None] = mapped_column(String(20))
 
     bill: Mapped[Bill | None] = relationship(lazy="joined")
 
@@ -249,6 +251,11 @@ class PoliticianStats(Base):
     votes_total: Mapped[int] = mapped_column(Integer, default=0)
     bills_authored: Mapped[int] = mapped_column(Integer, default=0)
     bills_reported: Mapped[int] = mapped_column(Integer, default=0)
+    # Votos Sim/Não iguais à orientação (partido / governo) ÷ votos Sim/Não com orientação.
+    party_alignment_rate: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    party_votes_compared: Mapped[int] = mapped_column(Integer, default=0)
+    government_alignment_rate: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    government_votes_compared: Mapped[int] = mapped_column(Integer, default=0)
     expenses_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0)
     house_avg: Mapped[dict[str, Any]] = mapped_column(JsonType, default=dict)
     computed_at: Mapped[datetime] = mapped_column(UTCDateTime, server_default=func.now())

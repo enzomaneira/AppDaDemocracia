@@ -195,6 +195,28 @@ function Performance({ slug, onShowBills }: { slug: string; onShowBills: () => v
               avg={s.expenses_total.house_avg}
               format={formatBRL}
             />
+            <StatTile
+              label="Votos alinhados ao partido"
+              value={s.party_alignment_rate.value}
+              avg={s.party_alignment_rate.house_avg}
+              format={formatPercent}
+              hint={
+                s.party_votes_compared
+                  ? `${s.party_votes_compared} votos Sim/Não com orientação do partido${s.party_alignment_rate.value === null ? " (mínimo de 10 para exibir)" : ""}`
+                  : "Sem votações com orientação do partido no período"
+              }
+            />
+            <StatTile
+              label="Votos alinhados ao governo"
+              value={s.government_alignment_rate.value}
+              avg={s.government_alignment_rate.house_avg}
+              format={formatPercent}
+              hint={
+                s.government_votes_compared
+                  ? `${s.government_votes_compared} votos Sim/Não com orientação do governo${s.government_alignment_rate.value === null ? " (mínimo de 10 para exibir)" : ""}`
+                  : "Só a Câmara publica a orientação do governo"
+              }
+            />
           </div>
           <UpdatedAt job="refresh_stats" />
         </>
