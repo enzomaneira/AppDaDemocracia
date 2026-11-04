@@ -74,6 +74,10 @@ export interface Stats {
   bills_authored: Metric;
   bills_reported: number;
   expenses_total: Metric;
+  party_alignment_rate: Metric;
+  party_votes_compared: number;
+  government_alignment_rate: Metric;
+  government_votes_compared: number;
   computed_at: string | null;
   methodology_url: string;
 }

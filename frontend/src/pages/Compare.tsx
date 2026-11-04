@@ -230,6 +230,24 @@ function Metrics({ a, b, sameHouse }: { a: Stats; b: Stats; sameHouse: boolean }
       avgB: b.expenses_total.house_avg,
       format: formatBRL,
     },
+    {
+      label: "Votos alinhados ao partido",
+      a: a.party_alignment_rate.value,
+      b: b.party_alignment_rate.value,
+      avgA: a.party_alignment_rate.house_avg,
+      avgB: b.party_alignment_rate.house_avg,
+      format: formatPercent,
+      hint: (s) => `de ${s.party_votes_compared} votos Sim/Não`,
+    },
+    {
+      label: "Votos alinhados ao governo",
+      a: a.government_alignment_rate.value,
+      b: b.government_alignment_rate.value,
+      avgA: a.government_alignment_rate.house_avg,
+      avgB: b.government_alignment_rate.house_avg,
+      format: formatPercent,
+      hint: (s) => `de ${s.government_votes_compared} votos Sim/Não`,
+    },
   ];
   return (
     <section className="card flex flex-col gap-5" aria-label="Métricas lado a lado">

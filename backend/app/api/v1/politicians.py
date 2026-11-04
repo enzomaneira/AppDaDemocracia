@@ -117,7 +117,8 @@ def stats_out(row: PoliticianStats | None, period_key: str, label: str) -> Stats
             period=period_key, period_label=label, attendance_rate=empty, sessions_total=0,
             sessions_present=0, sessions_justified=0, sessions_absent=0,
             votes_participated=empty, votes_total=0, bills_authored=empty, bills_reported=0,
-            expenses_total=empty, computed_at=None,
+            expenses_total=empty, party_alignment_rate=empty, party_votes_compared=0,
+            government_alignment_rate=empty, government_votes_compared=0, computed_at=None,
         )  # fmt: skip
     avg = row.house_avg or {}
 
@@ -139,6 +140,10 @@ def stats_out(row: PoliticianStats | None, period_key: str, label: str) -> Stats
         bills_authored=m(row.bills_authored, "bills_authored"),
         bills_reported=row.bills_reported,
         expenses_total=m(row.expenses_total, "expenses_total"),
+        party_alignment_rate=m(row.party_alignment_rate, "party_alignment_rate"),
+        party_votes_compared=row.party_votes_compared,
+        government_alignment_rate=m(row.government_alignment_rate, "government_alignment_rate"),
+        government_votes_compared=row.government_votes_compared,
         computed_at=row.computed_at,
     )
 
