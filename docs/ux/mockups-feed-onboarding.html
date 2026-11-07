@@ -1,0 +1,753 @@
+<title>Mockups do Plenário</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: page column with phone-frame mockups in wrapping grids. Tokens mirror the app (src/app/globals.css) so the screens look like the real product. Names, parties and numbers on screen are fictional. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --surface-2: #f5f7fa;
+  --border: #e1e6ed;
+  --text: #121a26;
+  --muted: #5d6b7e;
+  --brand: #0b2545;
+  --brand-text: #ffffff;
+  --accent: #1d7af3;
+  --accent-soft: #e3eefe;
+  --sim: #16a34a;
+  --nao: #dc2626;
+  --abst: #b45309;
+  --obst: #7c3aed;
+  --ausente: #94a3b8;
+  --moldura: #0b2545;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b1017; --surface: #141b25; --surface-2: #1b2430; --border: #263241;
+    --text: #e8edf3; --muted: #93a1b3; --brand: #0f1a29; --accent: #4c9bff; --accent-soft: #15263d;
+    --sim: #22c55e; --nao: #f05252; --abst: #f59e0b; --obst: #a78bfa; --ausente: #64748b; --moldura: #263241;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1017; --surface: #141b25; --surface-2: #1b2430; --border: #263241;
+  --text: #e8edf3; --muted: #93a1b3; --brand: #0f1a29; --accent: #4c9bff; --accent-soft: #15263d;
+  --sim: #22c55e; --nao: #f05252; --abst: #f59e0b; --obst: #a78bfa; --ausente: #64748b; --moldura: #263241;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 0 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.topo { background: var(--brand); color: var(--brand-text); }
+header.topo .wrap { padding-block: 36px 28px; display: grid; gap: 10px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+h1 { font-size: clamp(28px, 5vw, 38px); line-height: 1.1; font-weight: 800; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.lede { max-width: 64ch; margin: 0; opacity: .85; }
+.meta { font-family: var(--font-mono); font-size: 12px; opacity: .65; }
+main.wrap { display: grid; gap: 52px; padding-top: 32px; }
+section { display: grid; gap: 18px; }
+h2 { font-size: 22px; font-weight: 700; margin: 0; text-wrap: balance; }
+h3 { font-size: 15px; font-weight: 700; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); font-size: 12px; }
+
+/* decisões */
+.decididas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.dec { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: grid; gap: 4px; align-content: start; }
+.dec .k { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dec b { font-size: 15px; }
+.dec span.v { font-size: 13px; color: var(--muted); }
+
+/* grade de telas */
+.telas { display: grid; grid-template-columns: repeat(auto-fit, minmax(288px, 1fr)); gap: 28px 20px; justify-items: center; }
+figure { margin: 0; display: grid; gap: 12px; justify-items: center; width: 288px; max-width: 100%; }
+figcaption { font-size: 13px; color: var(--muted); max-width: 288px; }
+figcaption b { color: var(--text); display: block; font-size: 14px; margin-bottom: 2px; }
+
+/* celular */
+.fone { width: 288px; max-width: 100%; height: 590px; background: var(--bg); border: 7px solid var(--moldura); border-radius: 34px; overflow: hidden; display: flex; flex-direction: column; position: relative; font-size: 13px; }
+.status { height: 22px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font-size: 10px; font-weight: 600; background: var(--brand); color: #fff; flex: none; font-variant-numeric: tabular-nums; }
+.topapp { background: var(--brand); color: #fff; padding: 6px 14px 12px; display: flex; align-items: center; justify-content: space-between; flex: none; }
+.logo { font-weight: 800; letter-spacing: -.01em; font-size: 16px; }
+.uf-tag { font-family: var(--font-mono); font-size: 10px; background: rgba(255,255,255,.14); padding: 3px 7px; border-radius: 99px; }
+.conteudo { flex: 1; overflow: hidden; padding: 12px 12px 0; display: grid; gap: 10px; align-content: start; -webkit-mask-image: linear-gradient(#000 88%, transparent); mask-image: linear-gradient(#000 88%, transparent); }
+.nav { flex: none; display: flex; border-top: 1px solid var(--border); background: var(--surface); }
+.nav div { flex: 1; display: grid; justify-items: center; gap: 1px; padding: 7px 0 9px; font-size: 9.5px; font-weight: 500; color: var(--muted); }
+.nav div.on { color: var(--accent); }
+.nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.cartao { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.divide > * + * { border-top: 1px solid var(--border); }
+h4 { margin: 0; font-size: 18px; line-height: 1.2; font-weight: 800; text-wrap: balance; }
+.sub { font-size: 12px; color: var(--muted); }
+.rot { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+/* avatar */
+.av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; flex: none; }
+.av.p { width: 40px; height: 40px; font-size: 12px; }
+.av.a { background-color: #3b6ea8; } .av.b { background-color: #7a5a9e; } .av.c { background-color: #2f8a7a; } .av.d { background-color: #a8683b; } .av.e { background-color: #5b7a3b; }
+.carro { display: flex; gap: 10px; overflow: hidden; }
+.carro .it { display: grid; justify-items: center; gap: 3px; width: 46px; flex: none; font-size: 9.5px; font-weight: 500; text-align: center; line-height: 1.15; position: relative; }
+.carro .novo::after { content: ""; position: absolute; top: 0; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+.carro .mais .av { background: transparent; border: 1.5px dashed var(--border); color: var(--muted); font-size: 18px; font-weight: 400; }
+
+/* abas */
+.abas { display: grid; background: var(--surface-2); border-radius: 10px; padding: 3px; font-size: 11px; font-weight: 600; text-align: center; }
+.abas.tres { grid-template-columns: repeat(3, 1fr); }
+.abas.quatro { grid-template-columns: repeat(4, 1fr); }
+.abas span { padding: 6px 0; border-radius: 7px; color: var(--muted); }
+.abas span.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+/* votação */
+.vot { padding: 11px 12px; display: grid; gap: 7px; }
+.placar { display: grid; gap: 4px; }
+.placar .l { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.placar .l .s { color: var(--sim); } .placar .l .n { color: var(--nao); }
+.placar .l small { font-size: 9px; font-weight: 600; }
+.badge-ap { font-size: 9.5px; font-weight: 600; padding: 2px 7px; border-radius: 99px; background: color-mix(in srgb, var(--sim) 15%, transparent); color: var(--sim); }
+.barra { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: var(--surface-2); }
+.barra i { display: block; height: 100%; } .barra .s { background: var(--sim); } .barra .o { background: var(--ausente); } .barra .n { background: var(--nao); }
+.chip { display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #fff; font-size: 9.5px; padding: 2px 6px; }
+.chip.sim { background: var(--sim); } .chip.nao { background: var(--nao); } .chip.abst { background: var(--abst); }
+.chip.grande { font-size: 22px; padding: 6px 18px; border-radius: 9px; letter-spacing: .06em; }
+.seg { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: center; font-size: 11px; color: var(--muted); }
+.seg span.q { display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
+.seg .mini { width: 18px; height: 18px; font-size: 7.5px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; }
+
+/* anéis de desempenho */
+.anel { --v: 90; --c: var(--sim); width: 46px; aspect-ratio: 1; border-radius: 50%; background: conic-gradient(var(--c) calc(var(--v) * 1%), var(--surface-2) 0); display: grid; place-items: center; flex: none; }
+.anel b { width: 34px; aspect-ratio: 1; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.linha-pol { display: grid; grid-template-columns: auto 1fr auto auto; gap: 9px; align-items: center; padding: 10px 12px; }
+.linha-pol .nome { font-weight: 600; font-size: 12.5px; line-height: 1.2; }
+.cab-an { display: grid; grid-template-columns: 1fr auto auto; gap: 9px; padding: 8px 12px 0; font-size: 9.5px; font-weight: 600; color: var(--muted); text-align: center; }
+.cab-an span:first-child { text-align: left; }
+.cab-an span { width: 46px; } .cab-an span:first-child { width: auto; }
+.nota-rodape { font-size: 10.5px; color: var(--muted); padding: 8px 12px 10px; border-top: 1px solid var(--border); line-height: 1.4; }
+
+/* onboarding */
+.passo-n { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.ufs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.ufs span { text-align: center; padding: 7px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 11px; font-weight: 600; background: var(--surface); }
+.ufs span.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: 99px; padding: 11px; font-weight: 700; font-size: 13px; }
+.btn.sec { background: transparent; color: var(--muted); font-weight: 600; padding: 6px; font-size: 12px; }
+.sel { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
+.chk { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border); flex: none; display: grid; place-items: center; font-size: 11px; color: #fff; }
+.chk.on { background: var(--accent); border-color: var(--accent); }
+.busca { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: 12px; }
+.faixa-link { background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 12px; padding: 11px 12px; display: grid; gap: 7px; }
+.faixa-link b { font-size: 12.5px; }
+.faixa-link .btn { padding: 8px; font-size: 12px; }
+
+/* cartão de compartilhar (4:5) */
+.cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; justify-items: center; }
+.share { width: 100%; max-width: 320px; aspect-ratio: 4 / 5; background: #0b2545; color: #fff; border-radius: 16px; padding: 22px 22px 18px; display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 14px; box-shadow: 0 8px 24px rgba(11,37,69,.25); }
+.share .topo-c { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; opacity: .8; }
+.share .topo-c .logo { opacity: 1; font-size: 15px; }
+.share .quem { display: grid; gap: 2px; }
+.share .quem .nome-g { font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.share .quem .part { font-size: 12px; opacity: .75; }
+.share .proj { font-size: 13.5px; line-height: 1.35; opacity: .95; align-self: start; }
+.share .voto-box { display: grid; gap: 4px; justify-items: start; align-self: end; }
+.share .voto-box small { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; font-weight: 600; }
+.share .pl { display: grid; gap: 5px; }
+.share .pl .l { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.share .pl .l .s { color: #4ade80; } .share .pl .l .n { color: #f87171; }
+.share .pl .barra { background: rgba(255,255,255,.15); }
+.share .info { font-size: 11px; opacity: .8; display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.share .rodape { border-top: 1px solid rgba(255,255,255,.18); padding-top: 9px; font-size: 10px; opacity: .75; display: flex; justify-content: space-between; gap: 8px; }
+.share .chip.sim { background: #16a34a; } .share .chip.nao { background: #dc2626; }
+
+/* checklist e tabela */
+.duas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.caixa { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.caixa ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; }
+.tabela { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 620px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+.rec { background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 12px; padding: 16px; display: grid; gap: 6px; }
+.aviso { font-size: 12.5px; color: var(--muted); border-left: 3px solid var(--abst); padding-left: 12px; max-width: 70ch; }
+
+
+/* versão C: toggle de seguidos dentro da votação */
+.m { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--ausente); display: grid; place-items: center; font-size: 7.5px; font-weight: 700; color: #fff; margin-left: -5px; box-sizing: border-box; flex: none; }
+.m:first-child { margin-left: 0; }
+.m.a { background-color: #3b6ea8; } .m.b { background-color: #7a5a9e; } .m.c { background-color: #2f8a7a; } .m.d { background-color: #a8683b; } .m.e { background-color: #5b7a3b; }
+.m.v-sim { border-color: var(--sim); } .m.v-nao { border-color: var(--nao); } .m.v-abst { border-color: var(--abst); } .m.v-aus { border-color: var(--ausente); }
+.pilha { display: flex; }
+.vc { display: grid; }
+.vc .topo-v { padding: 11px 12px 10px; display: grid; gap: 7px; }
+.vc .tema { font-size: 15px; font-weight: 800; line-height: 1.25; letter-spacing: -.005em; text-wrap: balance; }
+.seg-d { border-top: 1px solid var(--border); }
+.seg-d summary { list-style: none; cursor: pointer; display: grid; gap: 5px; padding: 9px 12px; background: var(--surface-2); }
+.seg-d summary::-webkit-details-marker { display: none; }
+.seg-d summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.seg-d .s1 { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 700; }
+.seg-d .s2 { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chev { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.seg-d[open] .chev { transform: rotate(180deg); }
+.seg-d[open] summary .s2 { display: none; }
+.seg-d .linhas { display: grid; }
+.seg-d .vrow { display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--border); }
+.seg-d .vrow .nome { font-weight: 600; font-size: 12.5px; line-height: 1.2; }
+.seg-d .vrow .sub { font-size: 10.5px; }
+.seg-d .ver-desemp { padding: 8px 12px 10px; border-top: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--accent); display: flex; justify-content: space-between; }
+.chip.aus { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+details.ant { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; }
+details.ant > summary { cursor: pointer; padding: 14px 0; font-weight: 600; font-size: 14px; }
+details.ant > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details.ant[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+details.ant[open] { padding-bottom: 18px; display: grid; }
+details.ant .telas { margin-bottom: 18px; }
+
+
+/* foto do politico: silhueta de exemplo. No app vem do campo foto das APIs; sem foto, o Avatar mostra as iniciais */
+.av, .m { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='15' r='7' fill='%23fff' fill-opacity='.88'/%3E%3Cpath d='M6 40c1-9 7-14 14-14s13 5 14 14z' fill='%23fff' fill-opacity='.88'/%3E%3C/svg%3E"); background-size: cover; background-position: center; background-repeat: no-repeat; color: transparent; }
+.carro .it { font-weight: 600; }
+.carro .it .av.p { border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border); }
+
+
+/* seguir votacao */
+.rot-l { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sbtn { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px; border: 1.5px solid var(--accent); color: var(--accent); white-space: nowrap; background: transparent; letter-spacing: 0; text-transform: none; }
+.sbtn.on { background: var(--accent); color: #fff; }
+.andam { display: flex; gap: 7px; align-items: flex-start; font-size: 11.5px; line-height: 1.35; background: var(--accent-soft); padding: 7px 10px; border-radius: 8px; }
+.andam i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex: none; }
+.andam.quieto { background: var(--surface-2); color: var(--muted); }
+.andam.quieto i { background: var(--ausente); }
+.abas.dois { grid-template-columns: repeat(2, 1fr); }
+.toast { position: absolute; left: 12px; right: 12px; bottom: 58px; background: var(--text); color: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 11.5px; line-height: 1.35; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+.linha-tempo { display: grid; font-size: 11.5px; }
+.linha-tempo > div { display: grid; grid-template-columns: 14px 1fr; gap: 8px; padding-bottom: 9px; position: relative; }
+.linha-tempo > div::before { content: ""; position: absolute; left: 3.5px; top: 10px; bottom: 0; width: 1.5px; background: var(--border); }
+.linha-tempo > div:last-child::before { display: none; }
+.linha-tempo i { width: 8px; height: 8px; border-radius: 50%; background: var(--sim); margin-top: 4px; }
+.linha-tempo > div.prox i { background: var(--surface); border: 1.5px solid var(--ausente); }
+.linha-tempo .d { color: var(--muted); font-size: 10.5px; }
+.resumo-seg { padding: 9px 12px; background: var(--surface-2); font-size: 11.5px; font-weight: 700; }
+
+@media (max-width: 760px) {
+  .decididas, .duas { grid-template-columns: 1fr; }
+}
+</style>
+
+<header class="topo">
+  <div class="wrap">
+    <div class="eyebrow">Plenário · UX · mockups</div>
+    <h1>Mockups do onboarding, do feed e do cartão de compartilhar</h1>
+    <p class="lede">Telas montadas com as cores, os anéis e o placar do app atual. Nomes, partidos, votações e números são fictícios, só para mostrar a composição.</p>
+    <div class="meta">07/11/2026 · exemplo, não são dados reais</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>Direções de design</h2>
+    <div class="decididas">
+      <div class="dec"><span class="k">Onboarding</span><b>Pede a UF</b><span class="v">A pessoa escolhe o estado. Sem localização automática. A escolha fica só no aparelho.</span></div>
+      <div class="dec"><span class="k">Primeira tela do feed</span><b>Versão mesclada (C)</b><span class="v">A votação é o título. Quem você segue fica num toggle logo abaixo, com o voto de cada um.</span></div>
+      <div class="dec"><span class="k">Seguir uma votação</span><b>Botão em cada votação</b><span class="v">A pessoa acompanha o projeto por trás da votação. Lista na aba Seguindo.</span></div>
+      <div class="dec"><span class="k">Cartão de compartilhar</span><b>Mostra o voto individual</b><span class="v">Sempre com placar, orientação do partido e fonte oficial.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Onboarding “Meus representantes”</h2>
+    <p class="muted">Dois toques para sair do Início vazio e chegar a um feed preenchido. Nada de cadastro, e-mail ou pergunta sobre voto.</p>
+    <div class="telas">
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span></div>
+          <div class="conteudo">
+            <span class="passo-n">PASSO 1 DE 2</span>
+            <h4>Em qual estado você vota?</h4>
+            <p class="sub">Mostramos os 3 senadores e a bancada de deputados federais do seu estado. Isso fica só neste aparelho.</p>
+            <div class="ufs">
+              <span>AC</span><span>AL</span><span>AP</span><span>AM</span><span>BA</span><span>CE</span>
+              <span>DF</span><span>ES</span><span>GO</span><span>MA</span><span>MT</span><span>MS</span>
+              <span>MG</span><span>PA</span><span>PB</span><span>PR</span><span>PE</span><span>PI</span>
+              <span>RJ</span><span>RN</span><span>RS</span><span>RO</span><span>RR</span><span>SC</span>
+              <span class="on">SP</span><span>SE</span><span>TO</span>
+            </div>
+            <a class="btn">Continuar com SP</a>
+            <a class="btn sec">Pular e explorar sozinho</a>
+          </div>
+          <div class="nav">
+            <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>Passo 1 · Estado</b>Uma pergunta, uma ação. “Pular” existe para quem já sabe o que quer.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span><span class="uf-tag">SP</span></div>
+          <div class="conteudo">
+            <span class="passo-n">PASSO 2 DE 2</span>
+            <h4>Quem representa São Paulo</h4>
+            <div>
+              <div class="rot" style="margin-bottom:5px">Senado · 3 vagas</div>
+              <div class="cartao divide">
+                <div class="sel"><span class="chk on">✓</span><span class="av a">CN</span><div><div style="font-weight:600;font-size:12.5px">Carla Nogueira</div><div class="sub">PAV · Senadora</div></div></div>
+                <div class="sel"><span class="chk on">✓</span><span class="av b">MA</span><div><div style="font-weight:600;font-size:12.5px">Mário Antunes</div><div class="sub">PNO · Senador</div></div></div>
+                <div class="sel"><span class="chk on">✓</span><span class="av c">RS</span><div><div style="font-weight:600;font-size:12.5px">Regina Sales</div><div class="sub">PCT · Senadora</div></div></div>
+              </div>
+            </div>
+            <div>
+              <div class="rot" style="margin-bottom:5px">Câmara · 70 deputados federais</div>
+              <div class="busca">⌕ Procure pelo nome do seu deputado</div>
+            </div>
+            <div class="sel cartao"><span class="chk">&nbsp;</span><div><div style="font-weight:600;font-size:12.5px">Seguir toda a bancada de SP</div><div class="sub">O feed fica mais cheio. Dá para ajustar depois.</div></div></div>
+            <a class="btn">Seguir 3 e ver meu feed</a>
+          </div>
+          <div class="nav">
+            <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>Passo 2 · Representantes</b>Os senadores já vêm marcados. Os deputados entram por busca, porque seguir 70 de uma vez enche o feed.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>O feed: versão mesclada (C)</h2>
+    <p class="muted">A votação é o título de cada item, como na versão A. Quem você segue fica num toggle logo abaixo, com o voto de cada um e a orientação do partido. É o desempenho em forma de contexto, dentro do assunto que a pessoa já veio ver. Os toggles funcionam: toque neles.</p>
+    <div class="telas">
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span><span class="uf-tag">SP</span></div>
+          <div class="conteudo">
+            <div class="carro">
+              <div class="it novo"><span class="av d p">AP</span>Ana Prado</div>
+              <div class="it novo"><span class="av e p">BT</span>Bruno Teles</div>
+              <div class="it"><span class="av c p">DR</span>Diego Ramos</div>
+              <div class="it novo"><span class="av a p">CN</span>Carla Nogueira</div>
+              <div class="it mais"><span class="av p">+</span>Adicionar</div>
+            </div>
+            <div class="abas tres"><span class="on">Votações</span><span>Agenda</span><span>Notícias</span></div>
+            <div class="cartao vc">
+              <div class="topo-v">
+                <div class="rot-l"><span class="rot">Câmara · 05/11 · Plenário</span><span class="sbtn">+ Seguir</span></div>
+                <div class="tema">Piso salarial de agentes comunitários de saúde</div>
+                <div class="placar">
+                  <div class="l"><span class="s">312 <small>SIM</small></span><span class="badge-ap">Aprovada</span><span class="n"><small>NÃO</small> 140</span></div>
+                  <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:4%"></i><i class="n" style="width:30%"></i></div>
+                </div>
+              </div>
+              <details class="seg-d" open>
+                <summary aria-label="Como os 4 deputados que você segue votaram. Toque para recolher">
+                  <span class="s1">Como seus 4 seguidos votaram <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+                  <span class="s2"><span class="pilha"><i class="m d v-sim">AP</i><i class="m e v-nao">BT</i><i class="m c v-abst">DR</i><i class="m b v-aus">EM</i></span>1 sim · 1 não · 1 abst. · 1 aus.</span>
+                </summary>
+                <div class="linhas">
+                  <div class="vrow"><span class="av d">AP</span><div><div class="nome">Ana Prado</div><div class="sub">PAV-SP · orientação: Sim</div></div><span class="chip sim">Sim</span></div>
+                  <div class="vrow"><span class="av e">BT</span><div><div class="nome">Bruno Teles</div><div class="sub">PNO-SP · orientação: Não</div></div><span class="chip nao">Não</span></div>
+                  <div class="vrow"><span class="av c">DR</span><div><div class="nome">Diego Ramos</div><div class="sub">PCT-SP · orientação: Sim</div></div><span class="chip abst">Abst.</span></div>
+                  <div class="vrow"><span class="av b">EM</span><div><div class="nome">Elisa Matos</div><div class="sub">PAV-SP · orientação: Sim</div></div><span class="chip aus">Ausente</span></div>
+                  <div class="ver-desemp"><span>Ver presença e fidelidade de quem você segue</span><span>›</span></div>
+                </div>
+              </details>
+            </div>
+            <div class="cartao vc">
+              <div class="topo-v">
+                <div class="rot-l"><span class="rot">Senado · 04/11 · Plenário</span><span class="sbtn on">✓ Seguindo</span></div>
+                <div class="tema">Licenciamento de obras de saneamento</div>
+                <div class="placar">
+                  <div class="l"><span class="s">48 <small>SIM</small></span><span class="badge-ap">Aprovada</span><span class="n"><small>NÃO</small> 21</span></div>
+                  <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:5%"></i><i class="n" style="width:29%"></i></div>
+                </div>
+              </div>
+              <details class="seg-d">
+                <summary aria-label="Como os 2 senadores que você segue votaram. Toque para ver">
+                  <span class="s1">Como seus 2 seguidos votaram <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+                  <span class="s2"><span class="pilha"><i class="m a v-sim">CN</i><i class="m b v-sim">MA</i></span>2 sim</span>
+                </summary>
+              </details>
+            </div>
+            <div class="cartao vc">
+              <div class="topo-v">
+                <div class="rot">Senado · 03/11 · Plenário</div>
+                <div class="tema">Regras para pesca esportiva em águas federais</div>
+                <div class="placar">
+                  <div class="l"><span class="s">40 <small>SIM</small></span><span class="badge-ap" style="background:color-mix(in srgb,var(--nao) 15%,transparent);color:var(--nao)">Rejeitada</span><span class="n"><small>NÃO</small> 30</span></div>
+                  <div class="barra"><i class="s" style="width:56%"></i><i class="o" style="width:2%"></i><i class="n" style="width:42%"></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="nav">
+            <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>C · Ao abrir o app</b>O toggle da primeira votação já vem aberto. Cada votação tem o botão Seguir, aqui nos dois estados: não seguida e seguida.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">‹ Desempenho</span><span class="uf-tag">SP</span></div>
+          <div class="conteudo">
+            <div class="abas tres"><span class="on">Deputados</span><span>Senadores</span><span>Todos</span></div>
+            <div class="cartao">
+              <div class="cab-an"><span>Quem você segue</span><span>Presença</span><span>Fidelidade</span></div>
+              <div class="divide">
+                <div class="linha-pol"><span class="av d">AP</span><div><div class="nome">Ana Prado</div><div class="sub">PAV-SP</div></div><span class="anel" style="--v:88;--c:var(--sim)"><b>88%</b></span><span class="anel" style="--v:93;--c:var(--accent)"><b>93%</b></span></div>
+                <div class="linha-pol"><span class="av e">BT</span><div><div class="nome">Bruno Teles</div><div class="sub">PNO-SP</div></div><span class="anel" style="--v:91;--c:var(--sim)"><b>91%</b></span><span class="anel" style="--v:87;--c:var(--accent)"><b>87%</b></span></div>
+                <div class="linha-pol"><span class="av c">DR</span><div><div class="nome">Diego Ramos</div><div class="sub">PCT-SP</div></div><span class="anel" style="--v:76;--c:var(--abst)"><b>76%</b></span><span class="anel" style="--v:64;--c:var(--accent)"><b>64%</b></span></div>
+                <div class="linha-pol"><span class="av a">CN</span><div><div class="nome">Carla Nogueira</div><div class="sub">PAV-SP</div></div><span class="anel" style="--v:94;--c:var(--sim)"><b>94%</b></span><span class="anel" style="--v:81;--c:var(--accent)"><b>81%</b></span></div>
+                <div class="linha-pol"><span class="av b">MA</span><div><div class="nome">Mário Antunes</div><div class="sub">PNO-SP</div></div><span class="anel" style="--v:72;--c:var(--abst)"><b>72%</b></span><span class="anel" style="--v:90;--c:var(--accent)"><b>90%</b></span></div>
+              </div>
+              <div class="nota-rodape">Nas últimas 40 votações nominais. Descreve comportamento, não é nota: faltar pode ter justificativa e votar contra o partido pode ser legítimo.</div>
+            </div>
+          </div>
+          <div class="nav">
+            <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>Destino do link do toggle</b>Presença e fidelidade de quem você segue. É a versão B, agora como tela de apoio e não como primeira tela.</figcaption>
+      </figure>
+    </div>
+
+    <div class="duas">
+      <div class="caixa">
+        <h3>O que a versão C junta</h3>
+        <ul>
+          <li><b>De A:</b> o tema da votação é o título, e o feed continua sendo o que mudou.</li>
+          <li><b>De B:</b> o desempenho entra como contexto. A orientação do partido aparece em cada voto, e o link do toggle leva à tela com presença e fidelidade.</li>
+          <li><b>Novo:</b> o resumo recolhido mostra o voto de cada seguido só pela cor da borda, então dá para varrer o feed sem abrir nada.</li>
+        </ul>
+      </div>
+      <div class="caixa">
+        <h3>Detalhes de comportamento</h3>
+        <ul>
+          <li><b>Estado inicial:</b> o toggle da primeira votação já vem aberto e os demais recolhidos.</li>
+          <li><b>Quem entra no toggle:</b> só quem votou naquela votação, mais os ausentes. Seguidos de outra casa não aparecem.</li>
+          <li><b>Cor do voto:</b> a borda do avatar usa a cor do voto, e o texto do resumo repete a contagem, para quem não distingue cores.</li>
+          <li><b>Foto e nome:</b> o carrossel mostra a foto oficial com o nome abaixo do círculo. Na lista aberta o nome fica ao lado da foto. Sem foto na API, o app mostra as iniciais, como hoje. Nestes mockups as fotos são silhuetas.</li>
+        </ul>
+      </div>
+    </div>
+
+    <details class="ant">
+      <summary>Ver as versões A e B que originaram esta</summary>
+      <p class="muted">Mesmo conteúdo, ordem diferente. A pergunta é o que a pessoa vê primeiro depois do onboarding.</p>
+    <div class="telas">
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span><span class="uf-tag">SP</span></div>
+          <div class="conteudo">
+            <div class="carro">
+              <div class="it novo"><span class="av a p">CN</span>Carla Nogueira</div>
+              <div class="it novo"><span class="av b p">MA</span>Mário Antunes</div>
+              <div class="it"><span class="av c p">RS</span>Regina Sales</div>
+              <div class="it novo"><span class="av d p">AP</span>Ana Prado</div>
+              <div class="it mais"><span class="av p">+</span>Adicionar</div>
+            </div>
+            <div class="abas tres"><span class="on">Votações</span><span>Agenda</span><span>Notícias</span></div>
+            <div class="rot" style="color:var(--accent)">● 3 novas desde ontem</div>
+            <div class="cartao divide">
+              <div class="vot">
+                <div class="rot">Câmara · 05/11 · Plenário</div>
+                <div style="font-weight:600;line-height:1.3">Projeto de exemplo sobre piso salarial de agentes comunitários de saúde</div>
+                <div class="placar">
+                  <div class="l"><span class="s">312 <small>SIM</small></span><span class="badge-ap">Aprovada</span><span class="n"><small>NÃO</small> 140</span></div>
+                  <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:4%"></i><i class="n" style="width:30%"></i></div>
+                </div>
+                <div class="seg"><span>Seus seguidos:</span>
+                  <span class="q"><i class="mini av d">AP</i><span class="chip sim">Sim</span></span>
+                  <span class="q"><i class="mini av a">CN</i><span class="chip nao">Não</span></span>
+                </div>
+              </div>
+              <div class="vot">
+                <div class="rot">Senado · 04/11 · Plenário</div>
+                <div style="font-weight:600;line-height:1.3">Projeto de exemplo sobre regras de licenciamento de obras de saneamento</div>
+                <div class="placar">
+                  <div class="l"><span class="s">48 <small>SIM</small></span><span class="badge-ap">Aprovada</span><span class="n"><small>NÃO</small> 21</span></div>
+                  <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:5%"></i><i class="n" style="width:29%"></i></div>
+                </div>
+                <div class="seg"><span>Seus seguidos:</span>
+                  <span class="q"><i class="mini av b">MA</i><span class="chip sim">Sim</span></span>
+                  <span class="q"><i class="mini av c">RS</i><span class="chip abst">Abst.</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="nav">
+            <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>Versão A · Votações primeiro</b>É o que o app faz hoje, com o selo de novidade nos avatares. Mostra “como os seus votaram” logo no primeiro item.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span><span class="uf-tag">SP</span></div>
+          <div class="conteudo">
+            <div class="carro">
+              <div class="it"><span class="av a p">CN</span>Carla Nogueira</div>
+              <div class="it"><span class="av b p">MA</span>Mário Antunes</div>
+              <div class="it"><span class="av c p">RS</span>Regina Sales</div>
+              <div class="it"><span class="av d p">AP</span>Ana Prado</div>
+              <div class="it mais"><span class="av p">+</span>Adicionar</div>
+            </div>
+            <div class="abas quatro"><span class="on">Desempenho</span><span>Votações</span><span>Agenda</span><span>Notícias</span></div>
+            <div class="cartao">
+              <div class="cab-an"><span>Quem você segue</span><span>Presença</span><span>Fidelidade</span></div>
+              <div class="divide">
+                <div class="linha-pol"><span class="av a">CN</span><div><div class="nome">Carla Nogueira</div><div class="sub">PAV-SP</div></div><span class="anel" style="--v:94;--c:var(--sim)"><b>94%</b></span><span class="anel" style="--v:81;--c:var(--accent)"><b>81%</b></span></div>
+                <div class="linha-pol"><span class="av b">MA</span><div><div class="nome">Mário Antunes</div><div class="sub">PNO-SP</div></div><span class="anel" style="--v:72;--c:var(--abst)"><b>72%</b></span><span class="anel" style="--v:90;--c:var(--accent)"><b>90%</b></span></div>
+                <div class="linha-pol"><span class="av c">RS</span><div><div class="nome">Regina Sales</div><div class="sub">PCT-SP</div></div><span class="anel" style="--v:97;--c:var(--sim)"><b>97%</b></span><span class="anel" style="--v:68;--c:var(--accent)"><b>68%</b></span></div>
+                <div class="linha-pol"><span class="av d">AP</span><div><div class="nome">Ana Prado</div><div class="sub">PAV-SP</div></div><span class="anel" style="--v:88;--c:var(--sim)"><b>88%</b></span><span class="anel" style="--v:93;--c:var(--accent)"><b>93%</b></span></div>
+              </div>
+              <div class="nota-rodape">Nas últimas 40 votações nominais. Descreve comportamento, não é nota: faltar pode ter justificativa e votar contra o partido pode ser legítimo.</div>
+            </div>
+          </div>
+          <div class="nav">
+            <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>Versão B · Desempenho primeiro</b>Uma tabela de anéis com quem a pessoa segue. A ordem é a da lista de seguidos, nunca por pontuação.</figcaption>
+      </figure>
+    </div>
+
+    <div class="tabela">
+      <table>
+        <thead><tr><th></th><th>A · Votações primeiro</th><th>B · Desempenho primeiro</th></tr></thead>
+        <tbody>
+          <tr><td><b>Mostra valor em</b></td><td>Poucos segundos: o voto de alguém que a pessoa conhece</td><td>Um olhar: quem é assíduo, quem acompanha o partido</td></tr>
+          <tr><td><b>Dá motivo para voltar</b></td><td>Sim. Votações mudam toda semana e combinam com o selo de novidade</td><td>Pouco. Os percentuais se movem devagar</td></tr>
+          <tr><td><b>Risco de leitura</b></td><td>Baixo. É fato e fonte</td><td>Maior. Uma lista de anéis lembra ranking, mesmo sem ordenar por nota</td></tr>
+          <tr><td><b>Casa com o cartão de compartilhar</b></td><td>Direto: cada votação gera um cartão</td><td>Indireto</td></tr>
+          <tr><td><b>Esforço</b></td><td>Quase nenhum, já é o feed atual</td><td>Médio: nova tela agregada para vários políticos</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    </details>
+  </section>
+
+  <section>
+    <h2>Seguir uma votação</h2>
+    <p class="muted">Cada votação ganha um botão Seguir, no feed e na própria página. Uma votação é um evento que já terminou, então seguir significa acompanhar o projeto por trás dela: nova votação, ida ao Senado, sanção. O que a pessoa segue aparece na aba Seguindo.</p>
+    <div class="telas">
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">‹ Votação</span></div>
+          <div class="conteudo">
+            <div class="rot-l"><span class="rot">Câmara · 05/11/2026</span><span class="sbtn on">✓ Seguindo</span></div>
+            <h4>Piso salarial de agentes comunitários de saúde</h4>
+            <div class="placar">
+              <div class="l"><span class="s">312 <small>SIM</small></span><span class="badge-ap">Aprovada</span><span class="n"><small>NÃO</small> 140</span></div>
+              <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:4%"></i><i class="n" style="width:30%"></i></div>
+            </div>
+            <div>
+              <div class="rot" style="margin-bottom:7px">Andamento do projeto</div>
+              <div class="linha-tempo">
+                <div><i></i><span><b>Aprovado na Câmara</b><br><span class="d">05/11/2026 · 312 a 140</span></span></div>
+                <div><i></i><span><b>Enviado ao Senado</b><br><span class="d">06/11/2026</span></span></div>
+                <div class="prox"><i></i><span><b>Aguardando relator na comissão</b><br><span class="d">próximo passo</span></span></div>
+              </div>
+            </div>
+            <div class="cartao"><div class="resumo-seg">Como seus 4 seguidos votaram ›</div></div>
+          </div>
+          <div class="toast">Você vai ver o andamento deste projeto no Início e em Seguindo.</div>
+          <div class="nav"><div><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div><div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div><div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div><div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div></div>
+        </div>
+        <figcaption><b>Página da votação</b>Ao tocar em Seguir, o botão muda e aparece uma confirmação. A linha do tempo mostra o que já aconteceu e o próximo passo.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span><span class="uf-tag">SP</span></div>
+          <div class="conteudo">
+            <h4>Seguindo</h4>
+            <div class="abas dois"><span>Políticos</span><span class="on">Votações</span></div>
+            <div class="cartao vc">
+              <div class="topo-v">
+                <div class="rot-l"><span class="rot">Câmara · aprovada 312 × 140</span><span class="sbtn on">✓ Seguindo</span></div>
+                <div class="tema">Piso salarial de agentes comunitários de saúde</div>
+                <div class="andam"><i></i><span><b>Novo:</b> enviado ao Senado em 06/11</span></div>
+              </div>
+            </div>
+            <div class="cartao vc">
+              <div class="topo-v">
+                <div class="rot-l"><span class="rot">Senado · aprovada 48 × 21</span><span class="sbtn on">✓ Seguindo</span></div>
+                <div class="tema">Licenciamento de obras de saneamento</div>
+                <div class="andam quieto"><i></i><span>Aguardando sanção desde 04/11</span></div>
+              </div>
+            </div>
+            <div class="cartao vc">
+              <div class="topo-v">
+                <div class="rot-l"><span class="rot">Senado · rejeitada 40 × 30</span><span class="sbtn on">✓ Seguindo</span></div>
+                <div class="tema">Regras para pesca esportiva em águas federais</div>
+                <div class="andam quieto"><i></i><span>Arquivado em 03/11</span></div>
+              </div>
+            </div>
+            <p class="sub" style="padding:0 2px">Sua lista fica salva apenas neste navegador.</p>
+          </div>
+          <div class="nav"><div><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div><div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div><div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div><div class="on"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div></div>
+        </div>
+        <figcaption><b>Seguindo · aba Votações</b>A novidade vem destacada e o que não mudou fica em cinza. O que já terminou aparece como arquivado, e a pessoa decide se deixa de seguir.</figcaption>
+      </figure>
+    </div>
+
+    <div class="duas">
+      <div class="caixa">
+        <h3>O que a pessoa ganha</h3>
+        <ul>
+          <li><b>Onde segue:</b> botão no card do feed e na página da votação. Os dois mostram o mesmo estado.</li>
+          <li><b>Onde acompanha:</b> aba Votações em Seguindo, e o selo de novo andamento no Início (o mesmo mecanismo do selo de novidades).</li>
+          <li><b>Onde fica salvo:</b> no navegador, como a lista de políticos. Sem login, e sem notificação até existirem alertas (push ou e-mail).</li>
+        </ul>
+      </div>
+      <div class="caixa">
+        <h3>A confirmar na implementação</h3>
+        <ul>
+          <li><b>Dados de andamento:</b> conferir se as APIs da Câmara e do Senado entregam a tramitação de cada projeto de forma simples. Se não, a primeira versão avisa só quando houver nova votação do mesmo projeto.</li>
+          <li><b>Privacidade:</b> o que a pessoa segue revela interesses políticos. Por isso fica só no aparelho, e nunca deve virar recomendação ou perfil.</li>
+          <li><b>Seguir por tema</b> (saúde, educação) é outra coisa e pode vir depois.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cartão de compartilhar com o voto individual</h2>
+    <p class="muted">A mesma moldura para qualquer político, de qualquer partido. O voto aparece sempre junto do placar geral, da orientação do partido e da fonte.</p>
+    <div class="cartoes">
+      <div class="share" role="img" aria-label="Exemplo de cartão: Ana Prado votou sim em projeto de exemplo. Placar 312 a 140.">
+        <div class="topo-c"><span class="logo">Plenário</span><span>Votação nominal · 05/11/2026</span></div>
+        <div class="quem"><span class="nome-g">Ana Prado</span><span class="part">Deputada federal · PAV-SP</span></div>
+        <div class="proj">Projeto de exemplo sobre piso salarial de agentes comunitários de saúde</div>
+        <div class="voto-box"><small>Votou</small><span class="chip grande sim">Sim</span></div>
+        <div>
+          <div class="pl">
+            <div class="l"><span class="s">312 SIM</span><span class="n">NÃO 140</span></div>
+            <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:4%"></i><i class="n" style="width:30%"></i></div>
+          </div>
+          <div class="info" style="margin-top:8px"><span>Orientação do PAV: Sim</span><span>Resultado: aprovada</span></div>
+        </div>
+        <div class="rodape"><span>Fonte: Dados Abertos da Câmara dos Deputados</span><span>Exemplo</span></div>
+      </div>
+
+      <div class="share" role="img" aria-label="Exemplo de cartão: Bruno Teles votou não em projeto de exemplo. Placar 312 a 140.">
+        <div class="topo-c"><span class="logo">Plenário</span><span>Votação nominal · 05/11/2026</span></div>
+        <div class="quem"><span class="nome-g">Bruno Teles</span><span class="part">Deputado federal · PNO-SP</span></div>
+        <div class="proj">Projeto de exemplo sobre piso salarial de agentes comunitários de saúde</div>
+        <div class="voto-box"><small>Votou</small><span class="chip grande nao">Não</span></div>
+        <div>
+          <div class="pl">
+            <div class="l"><span class="s">312 SIM</span><span class="n">NÃO 140</span></div>
+            <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:4%"></i><i class="n" style="width:30%"></i></div>
+          </div>
+          <div class="info" style="margin-top:8px"><span>Orientação do PNO: Não</span><span>Resultado: aprovada</span></div>
+        </div>
+        <div class="rodape"><span>Fonte: Dados Abertos da Câmara dos Deputados</span><span>Exemplo</span></div>
+      </div>
+    </div>
+
+    <div class="duas">
+      <div class="caixa">
+        <h3>O que o cartão tem sempre</h3>
+        <ul>
+          <li>Nome, cargo, partido e UF do político</li>
+          <li>Voto escrito por extenso, na mesma cor e tamanho para qualquer tipo de voto</li>
+          <li>Placar geral e resultado, para dar contexto</li>
+          <li>Orientação do partido, só quando a fonte oficial traz</li>
+          <li>Data da votação e fonte oficial visíveis</li>
+        </ul>
+      </div>
+      <div class="caixa">
+        <h3>Regras de conteúdo do cartão</h3>
+        <ul>
+          <li><b>Teste do espelho:</b> a mesma peça com um político de outro partido precisa ser igualmente aceitável</li>
+          <li>Sem adjetivo, sem cor de partido e sem frase de efeito sobre o voto</li>
+          <li>Números iguais aos da fonte oficial</li>
+          <li>Nada que pareça medir preferência eleitoral em ano de eleição</li>
+          <li>Nunca gerar o cartão a partir do modo demonstração</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Quem recebe o link</h2>
+    <p class="muted">O link do cartão abre a página da votação. Uma faixa explica o Plenário e leva ao onboarding, sem tirar a pessoa do que ela veio ver.</p>
+    <div class="telas">
+      <figure>
+        <div class="fone">
+          <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+          <div class="topapp"><span class="logo">Plenário</span></div>
+          <div class="conteudo">
+            <div class="faixa-link">
+              <b>Acompanhe quem representa o seu estado</b>
+              <span class="sub">O Plenário é grátis, apartidário e usa só dados oficiais.</span>
+              <a class="btn">Escolher meu estado</a>
+            </div>
+            <div class="rot">Câmara · 05/11/2026</div>
+            <h4>Projeto de exemplo sobre piso salarial de agentes comunitários de saúde</h4>
+            <div class="placar">
+              <div class="l"><span class="s">312 <small>SIM</small></span><span class="badge-ap">Aprovada</span><span class="n"><small>NÃO</small> 140</span></div>
+              <div class="barra"><i class="s" style="width:66%"></i><i class="o" style="width:4%"></i><i class="n" style="width:30%"></i></div>
+            </div>
+            <div class="cartao divide">
+              <div class="sel"><span class="av d">AP</span><div style="flex:1"><div style="font-weight:600;font-size:12.5px">Ana Prado</div><div class="sub">PAV-SP</div></div><span class="chip sim">Sim</span></div>
+              <div class="sel"><span class="av e">BT</span><div style="flex:1"><div style="font-weight:600;font-size:12.5px">Bruno Teles</div><div class="sub">PNO-SP</div></div><span class="chip nao">Não</span></div>
+            </div>
+          </div>
+          <div class="nav">
+            <div><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Início</div>
+            <div><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 105.3 11.6L20 19.3M11 4a7 7 0 017 7"/></svg>Explorar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"/></svg>Comparar</div>
+            <div><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Seguindo</div>
+          </div>
+        </div>
+        <figcaption><b>Página da votação aberta por link</b>A faixa só aparece para quem ainda não segue ninguém. Quem já usa o app não a vê.</figcaption>
+      </figure>
+      <div class="caixa" style="max-width:420px;align-self:start">
+        <h3>Notas de implementação</h3>
+        <ul>
+          <li>O cartão pode ser gerado no servidor como imagem (rota de Open Graph) a partir do id da votação e do id do político.</li>
+          <li>A UF do onboarding e a data da última visita ficam no navegador, no mesmo lugar da lista de seguidos.</li>
+          <li>A faixa depende apenas de a lista de seguidos estar vazia.</li>
+        </ul>
+        <p class="aviso">Tudo nestas telas é exemplo: nomes, partidos, votações e números são fictícios.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
