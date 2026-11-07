@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1024" viewBox="0 0 1440 1024">
+<title>01 Capa</title>
+<rect width="1440" height="1024" fill="#173A63"/>
+<defs>
+  <pattern id="az1" width="64" height="64" patternUnits="userSpaceOnUse" x="0" y="0">
+    <path d="M0 32A32 32 0 0 1 32 0v32z" fill="#F7F2EA"/>
+    <path d="M64 32A32 32 0 0 0 32 0v32z" fill="none" stroke="#F7F2EA" stroke-width="3"/>
+    <circle cx="16" cy="48" r="8" fill="#8FC1E3"/>
+    <path d="M32 64a32 32 0 0 1 32-32v32z" fill="#8FC1E3"/>
+  </pattern>
+</defs>
+<rect x="0" y="0" width="1440" height="1024" rx="0" fill="url(#az1)" opacity="0.13"/><g transform="translate(96 300) scale(3.8182)">
+  <path d="M9 4h26a7 7 0 0 1 7 7v15a7 7 0 0 1-7 7H20l-9 8v-8H9a7 7 0 0 1-7-7V11a7 7 0 0 1 7-7z" fill="#F7F2EA"/>
+  <path d="M7 21 Q12.5 28.5 18 21 Z" fill="#1D4E89"/>
+  <path d="M26 22.5 Q31.5 14.5 37 22.5 Z" fill="#1D4E89"/>
+  <rect x="19.4" y="10" width="1.9" height="13" rx=".6" fill="#173A63"/>
+  <rect x="22.6" y="10" width="1.9" height="13" rx=".6" fill="#173A63"/>
+  <rect x="6" y="24.2" width="32" height="2" rx="1" fill="#1D4E89"/>
+</g><text x="96" y="640" font-family="Bricolage Grotesque" font-size="168" font-weight="800" fill="#F7F2EA" text-anchor="start" letter-spacing="-5" >plenário</text><text x="96" y="720" font-family="Bricolage Grotesque" font-size="40" font-weight="600" fill="#8FC1E3" text-anchor="start" letter-spacing="0" >Manual de marca</text><text x="96" y="900" font-family="Figtree" font-size="26" font-weight="500" fill="#F7F2EA" text-anchor="start" letter-spacing="0" >O Congresso, em linguagem de gente.</text><text x="96" y="940" font-family="Figtree" font-size="18" font-weight="400" fill="#F7F2EAB3" text-anchor="start" letter-spacing="0" >Identidade Brasília acolhedora · versão 1.0 · outubro de 2026</text>
+<text x="96" y="64" font-family="IBM Plex Mono" font-size="13" font-weight="500" fill="#F7F2EAB3" text-anchor="start" letter-spacing="1.4" >MANUAL DE MARCA · PLENÁRIO</text><text x="1344" y="64" font-family="IBM Plex Mono" font-size="13" font-weight="500" fill="#F7F2EAB3" text-anchor="end" letter-spacing="1.4" >01 / 09</text>
+
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1024" viewBox="0 0 1440 1024">
+<title>07 Elementos gráficos</title>
+<rect width="1440" height="1024" fill="#F7F2EA"/>
+<rect x="96" y="270" width="620" height="460" rx="28" fill="#173A63" /><defs>
+  <pattern id="az7" width="64" height="64" patternUnits="userSpaceOnUse" x="96" y="270">
+    <path d="M0 32A32 32 0 0 1 32 0v32z" fill="#F7F2EA"/>
+    <path d="M64 32A32 32 0 0 0 32 0v32z" fill="none" stroke="#F7F2EA" stroke-width="3"/>
+    <circle cx="16" cy="48" r="8" fill="#8FC1E3"/>
+    <path d="M32 64a32 32 0 0 1 32-32v32z" fill="#8FC1E3"/>
+  </pattern>
+</defs>
+<rect x="96" y="270" width="620" height="460" rx="28" fill="url(#az7)" opacity="0.35"/><text x="96" y="770" font-family="Figtree" font-size="20" font-weight="700" fill="#1E2A33" text-anchor="start" letter-spacing="0" >Padrão de azulejos</text><text x="96" y="800" font-family="Figtree" font-size="17" font-weight="400" fill="#66707A"><tspan x="96" dy="0.0">Homenagem a Athos Bulcão. Quartos de círculo em módulos de 64 px, em</tspan><tspan x="96" dy="24.6">areia e planalto sobre cúpula. Use só em fundos de marca: cabeçalhos,</tspan><tspan x="96" dy="24.6">capas e topo da landing page. Opacidade entre 12% e 16%.</tspan></text><text x="780" y="290" font-family="IBM Plex Mono" font-size="13" font-weight="500" fill="#66707A" text-anchor="start" letter-spacing="1.4" >MÓDULO</text><g transform="translate(780 310) scale(3)">
+  <rect width="64" height="64" fill="#173A63"/>
+  <path d="M0 32A32 32 0 0 1 32 0v32z" fill="#F7F2EA"/>
+  <path d="M64 32A32 32 0 0 0 32 0v32z" fill="none" stroke="#F7F2EA" stroke-width="3"/>
+  <circle cx="16" cy="48" r="8" fill="#8FC1E3"/>
+  <path d="M32 64a32 32 0 0 1 32-32v32z" fill="#8FC1E3"/>
+</g><text x="1010" y="290" font-family="IBM Plex Mono" font-size="13" font-weight="500" fill="#66707A" text-anchor="start" letter-spacing="1.4" >FORMAS</text><rect x="1010" y="310" width="300" height="56" rx="28" fill="#1D4E89" /><text x="1160" y="345" font-family="Figtree" font-size="18" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0" >Botão em pílula</text><rect x="1010" y="386" width="130" height="34" rx="17" fill="#E3ECF6" /><text x="1075" y="409" font-family="Figtree" font-size="13" font-weight="700" fill="#1D4E89" text-anchor="middle" letter-spacing="1" >CÂMARA</text><rect x="1150" y="386" width="120" height="34" rx="17" fill="#EEE7F6" /><text x="1210" y="409" font-family="Figtree" font-size="13" font-weight="700" fill="#7B5EA7" text-anchor="middle" letter-spacing="1" >SENADO</text><rect x="1010" y="440" width="300" height="150" rx="20" fill="#FFFDF9" stroke="#E6DDD0" stroke-width="1" /><text x="1030" y="480" font-family="Bricolage Grotesque" font-size="20" font-weight="800" fill="#1E2A33" text-anchor="start" letter-spacing="0" >Cartão</text><text x="1030" y="510" font-family="Figtree" font-size="15" font-weight="400" fill="#66707A" text-anchor="start" letter-spacing="0" >cantos de 20 px, borda</text><text x="1030" y="532" font-family="Figtree" font-size="15" font-weight="400" fill="#66707A" text-anchor="start" letter-spacing="0" >de 1 px, sem sombra</text><text x="1010" y="640" font-family="Figtree" font-size="15" font-weight="500" fill="#66707A" text-anchor="start" letter-spacing="0" >Raios: 999 px (pílulas) · 20 px</text><text x="1010" y="664" font-family="Figtree" font-size="15" font-weight="500" fill="#66707A" text-anchor="start" letter-spacing="0" >(cartões) · 12 px (campos)</text>
+<text x="96" y="64" font-family="IBM Plex Mono" font-size="13" font-weight="500" fill="#66707A" text-anchor="start" letter-spacing="1.4" >MANUAL DE MARCA · PLENÁRIO</text><text x="1344" y="64" font-family="IBM Plex Mono" font-size="13" font-weight="500" fill="#66707A" text-anchor="end" letter-spacing="1.4" >07 / 09</text>
+<text x="96" y="150" font-family="IBM Plex Mono" font-size="14" font-weight="500" fill="#1D4E89" text-anchor="start" letter-spacing="1.6" >ELEMENTOS GRÁFICOS</text><text x="96" y="214" font-family="Bricolage Grotesque" font-size="56" font-weight="800" fill="#1E2A33" text-anchor="start" letter-spacing="-1.2" >Azulejos e formas</text>
+</svg>

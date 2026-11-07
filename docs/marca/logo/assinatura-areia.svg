@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="196" height="44" viewBox="0 0 196 44"><rect width="196" height="44" fill="#173A63"/><g transform="translate(0 0) scale(1.0000)">
+  <path d="M9 4h26a7 7 0 0 1 7 7v15a7 7 0 0 1-7 7H20l-9 8v-8H9a7 7 0 0 1-7-7V11a7 7 0 0 1 7-7z" fill="#F7F2EA"/>
+  <path d="M7 21 Q12.5 28.5 18 21 Z" fill="#1D4E89"/>
+  <path d="M26 22.5 Q31.5 14.5 37 22.5 Z" fill="#1D4E89"/>
+  <rect x="19.4" y="10" width="1.9" height="13" rx=".6" fill="#173A63"/>
+  <rect x="22.6" y="10" width="1.9" height="13" rx=".6" fill="#173A63"/>
+  <rect x="6" y="24.2" width="32" height="2" rx="1" fill="#1D4E89"/>
+</g><text x="51.919999999999995" y="29.040000000000003" font-family="Bricolage Grotesque" font-size="29.92" font-weight="800" fill="#F7F2EA" text-anchor="start" letter-spacing="-0.528" >plenário</text></svg>
