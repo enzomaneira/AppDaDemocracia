@@ -7,14 +7,17 @@ import { VoteBadge } from "./VoteBadge";
 
 const TYPE_LABEL = { vote: "Votou", agenda: "Agenda", news: "Notícia", bill: "Apresentou proposição" } as const;
 
-export function FeedItemCard({ item }: { item: FeedItem }) {
+export function FeedItemCard({ item, isNew = false }: { item: FeedItem; isNew?: boolean }) {
   const p = item.politician;
   const pl = item.payload;
   return (
-    <li className="card flex gap-3">
+    <li className={`card flex gap-3 ${isNew ? "border-l-4 border-l-marca" : ""}`}>
       <Avatar p={p} size={40} />
       <div className="min-w-0 flex-1">
         <p className="text-sm">
+          {isNew && (
+            <span className="mr-2 rounded-full bg-marca px-2 py-0.5 text-xs font-semibold text-white">Novo</span>
+          )}
           <Link to={`/politico/${p.slug}`} className="font-semibold hover:underline">
             {p.name}
           </Link>{" "}

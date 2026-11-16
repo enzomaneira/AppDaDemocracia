@@ -8,6 +8,7 @@ import { FeedItemCard } from "../components/FeedItemCard";
 import { SurveyInvite } from "../components/SurveyInvite";
 import { Avatar } from "../components/PoliticianCard";
 import { Empty, ErrorBox, LoadMore, Loading, UpdatedAt } from "../components/States";
+import { beginVisit, isNew, sinceLabel } from "../lib/lastVisit";
 
 const FILTERS: [FeedType | "", string][] = [
   ["", "Tudo"],
@@ -58,6 +59,8 @@ function Welcome() {
 
 function Feed() {
   const [type, setType] = useState<FeedType | "">("");
+  // Corte do selo de novidades: fixado ao abrir o Início, para não mudar enquanto a pessoa lê.
+  const [since] = useState(() => beginVisit());
   const follows = useFollows();
   const feed = useFeed(type, (follows.data?.length ?? 0) > 0);
 
@@ -75,6 +78,10 @@ function Feed() {
   }
 
   const items = feed.data?.pages.flatMap((p) => p.items) ?? [];
+  const fresh = items.filter((i) => isNew(i.occurred_at, since));
+  const withNews = new Set(fresh.map((i) => i.politician.id));
+  // Se tudo o que já carregou é novo e ainda há páginas, o total pode ser maior.
+  const more = fresh.length === items.length && feed.hasNextPage ? "+" : "";
   return (
     <div className="flex flex-col gap-4">
       <SurveyInvite />
@@ -84,8 +91,19 @@ function Feed() {
           {follows.data.map((f) => (
             <li key={f.politician.id}>
               <Link to={`/politico/${f.politician.slug}`} className="flex w-16 flex-col items-center gap-1 text-center">
-                <Avatar p={f.politician} size={52} />
-                <span className="line-clamp-2 text-xs">{f.politician.name}</span>
+                <span className="relative">
+                  <Avatar p={f.politician} size={52} />
+                  {withNews.has(f.politician.id) && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-0 top-0 size-3 rounded-full border-2 border-white bg-marca dark:border-slate-950"
+                    />
+                  )}
+                </span>
+                <span className="line-clamp-2 text-xs">
+                  {f.politician.name}
+                  {withNews.has(f.politician.id) && <span className="sr-only"> (tem novidade)</span>}
+                </span>
               </Link>
             </li>
           ))}
@@ -122,11 +140,19 @@ function Feed() {
       ) : items.length === 0 ? (
         <Empty title="Nada por aqui ainda">Novidades aparecem depois da sincronização diária com as fontes oficiais.</Empty>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {items.map((i) => (
-            <FeedItemCard key={i.id} item={i} />
-          ))}
-        </ul>
+        <>
+          {since && fresh.length > 0 && (
+            <p className="text-sm font-semibold" role="status">
+              {fresh.length}
+              {more} {fresh.length === 1 && !more ? "novidade" : "novidades"} {sinceLabel(since)}
+            </p>
+          )}
+          <ul className="flex flex-col gap-3">
+            {items.map((i) => (
+              <FeedItemCard key={i.id} item={i} isNew={isNew(i.occurred_at, since)} />
+            ))}
+          </ul>
+        </>
       )}
       <LoadMore hasNext={feed.hasNextPage} loading={feed.isFetchingNextPage} onClick={() => feed.fetchNextPage()} />
     </div>
