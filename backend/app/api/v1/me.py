@@ -7,8 +7,25 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import delete, select
 
 from app.api.deps import DB, CurrentUser, is_admin
-from app.models import FeedEvent, FeedType, Follow, Politician, RefreshToken, SurveyResponse
-from app.schemas import FeedItem, FollowOut, FollowPrefs, Page, UserOut, UserUpdate
+from app.models import (
+    FeedEvent,
+    FeedType,
+    Follow,
+    House,
+    Politician,
+    RefreshToken,
+    SurveyResponse,
+)
+from app.schemas import (
+    BulkFollowIn,
+    BulkFollowOut,
+    FeedItem,
+    FollowOut,
+    FollowPrefs,
+    Page,
+    UserOut,
+    UserUpdate,
+)
 from app.services.feed import query_feed
 from app.services.presenters import politician_summary
 
@@ -102,6 +119,44 @@ async def follow(
     )
     await db.commit()
     return prefs
+
+
+def bulk_follow_prefs(house: House) -> FollowPrefs:
+    """Avisos de quem foi seguido em lote ("seguir a bancada"), por casa.
+
+    Seguir um a um é uma escolha deliberada e usa o padrão de FollowPrefs. Em lote a pessoa
+    pode ganhar 3 senadores e até 70 deputados de uma vez, então o padrão pode ser outro.
+    """
+    if house == House.senado:
+        return FollowPrefs()
+    # Bancada da Câmara: aparece no feed, mas sem avisos até a pessoa ligar em Conta.
+    return FollowPrefs(notify_votes=False, notify_agenda=False, notify_news=False)
+
+
+@router.post("/follows/bulk", response_model=BulkFollowOut)
+async def follow_bulk(body: BulkFollowIn, user: CurrentUser, db: DB) -> BulkFollowOut:
+    """Segue os parlamentares em exercício da UF; quem já era seguido fica como está."""
+    stmt = select(Politician).where(
+        Politician.in_office.is_(True), Politician.uf == body.uf.upper()
+    )
+    if body.house:
+        stmt = stmt.where(Politician.house == House(body.house))
+    politicians = list((await db.execute(stmt)).scalars())
+    already = set(await followed_ids(db, user.id))
+    new = [p for p in politicians if p.id not in already]
+    for p in new:
+        prefs = bulk_follow_prefs(p.house)
+        db.add(
+            Follow(
+                user_id=user.id,
+                politician_id=p.id,
+                notify_votes=prefs.notify_votes,
+                notify_agenda=prefs.notify_agenda,
+                notify_news=prefs.notify_news,
+            )
+        )
+    await db.commit()
+    return BulkFollowOut(followed=len(new), total=len(politicians))
 
 
 @router.delete("/follows/{politician_id}", status_code=204)

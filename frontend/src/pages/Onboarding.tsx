@@ -3,11 +3,15 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import { api } from "../api/client";
-import { useFollows, useMySurvey, useSearch } from "../api/hooks";
+import { useBulkFollow, useFollows, useMySurvey, useSearch } from "../api/hooks";
+import type { House, PoliticianSummary } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { PoliticianCard } from "../components/PoliticianCard";
-import { ErrorBox, LoadMore, Loading } from "../components/States";
+import { ErrorBox, Loading } from "../components/States";
 import { UFS } from "../lib/ufs";
+
+// A maior bancada (SP) tem 70 deputados: uma página de 100 traz a casa inteira da UF.
+const WHOLE_STATE = 100;
 
 /** RF02: escolher a UF e seguir os parlamentares do estado em um toque. */
 export default function Onboarding() {
@@ -18,7 +22,6 @@ export default function Onboarding() {
   const survey = useMySurvey(loggedIn);
   // Próximo passo: a pesquisa (opcional, com "Agora não") para quem nunca respondeu.
   const after = survey.data?.prompt ? "/pesquisa?next=/" : "/";
-  const res = useSearch({ uf: uf || undefined });
 
   if (!loggedIn) return <Navigate to="/entrar" replace />;
 
@@ -31,9 +34,6 @@ export default function Onboarding() {
   }
 
   const followed = new Set(follows.data?.map((f) => f.politician.id));
-  const items = uf ? (res.data?.pages.flatMap((p) => p.items) ?? []) : [];
-  const senators = items.filter((p) => p.house === "senado");
-  const deputies = items.filter((p) => p.house === "camara");
 
   return (
     <div className="flex flex-col gap-4">
@@ -49,18 +49,12 @@ export default function Onboarding() {
           ))}
         </select>
       </label>
-      {uf &&
-        (res.isLoading ? (
-          <Loading />
-        ) : res.error ? (
-          <ErrorBox error={res.error} />
-        ) : (
-          <>
-            <Group title={`Senadores por ${uf}`} items={senators} followed={followed} />
-            <Group title={`Deputados federais por ${uf}`} items={deputies} followed={followed} />
-            <LoadMore hasNext={res.hasNextPage} loading={res.isFetchingNextPage} onClick={() => res.fetchNextPage()} />
-          </>
-        ))}
+      {uf && (
+        <>
+          <Group title={`Senadores por ${uf}`} uf={uf} house="senado" followed={followed} />
+          <Group title={`Deputados federais por ${uf}`} uf={uf} house="camara" followed={followed} />
+        </>
+      )}
       <Link to={after} className="btn-primary sticky bottom-20 sm:bottom-4">
         {followed.size ? `Continuar (${followed.size} seguidos)` : "Pular por agora"}
       </Link>
@@ -68,19 +62,35 @@ export default function Onboarding() {
   );
 }
 
-function Group({
-  title,
-  items,
-  followed,
-}: {
-  title: string;
-  items: ReturnType<typeof useSearch>["data"] extends infer D ? (D extends { pages: { items: infer I }[] } ? I : never) : never;
-  followed: Set<string>;
-}) {
+/** Uma casa da UF, com o botão que segue todos de uma vez. */
+function Group({ title, uf, house, followed }: { title: string; uf: string; house: House; followed: Set<string> }) {
+  const res = useSearch({ uf, house, limit: WHOLE_STATE });
+  const bulk = useBulkFollow();
+
+  if (res.isLoading) return <Loading />;
+  if (res.error) return <ErrorBox error={res.error} />;
+  const items: PoliticianSummary[] = res.data?.pages.flatMap((p) => p.items) ?? [];
   if (!items.length) return null;
+  const pending = items.filter((p) => !followed.has(p.id)).length;
+
   return (
     <section>
-      <h2 className="mb-2 font-semibold">{title}</h2>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">{title}</h2>
+        {pending > 0 ? (
+          <button
+            type="button"
+            className="btn-secondary min-h-9 px-3"
+            disabled={bulk.isPending}
+            onClick={() => bulk.mutate({ uf, house })}
+          >
+            {pending === items.length ? `Seguir todos (${items.length})` : `Seguir os outros ${pending}`}
+          </button>
+        ) : (
+          <span className="text-sm muted">Seguindo todos</span>
+        )}
+      </div>
+      {bulk.error && <ErrorBox error={bulk.error} />}
       <ul className="flex flex-col gap-2">
         {items.map((p) => (
           <PoliticianCard key={p.id} p={p} following={followed.has(p.id)} />

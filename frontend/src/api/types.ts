@@ -152,6 +152,11 @@ export interface FollowPrefs {
   notify_news: boolean;
 }
 
+export interface BulkFollowResult {
+  followed: number;
+  total: number;
+}
+
 export interface Follow extends FollowPrefs {
   politician: PoliticianSummary;
   created_at: string;

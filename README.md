@@ -135,7 +135,7 @@ uma execução e depois remova a variável (sem ela, o cron volta ao modo increm
 ## Status do MVP
 
 Pronto (P0): conta (e-mail/senha, refresh token com rotação, rota `/auth/google` para ID token do
-Google), onboarding por UF, seguir/deixar de seguir, busca com filtros, feed por cursor, perfil com
+Google), onboarding por UF (com "Seguir todos" os senadores ou a bancada, via `POST /me/follows/bulk`), seguir/deixar de seguir, busca com filtros, feed por cursor, perfil com
 desempenho e média da casa, agenda, votações com orientação do partido, notícias, página de votação,
 exportação e exclusão de conta (LGPD), PWA instalável e rotas admin básicas.
 

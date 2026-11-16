@@ -4,6 +4,7 @@ import { api, toQuery } from "./client";
 import type {
   AgendaItem,
   BillsPage,
+  BulkFollowResult,
   Compare,
   CompareVote,
   Expenses,
@@ -43,6 +44,7 @@ export interface SearchFilters {
   uf?: string;
   party?: string;
   house?: House | "";
+  limit?: number;
 }
 
 export const useSearch = (f: SearchFilters) =>
@@ -159,6 +161,20 @@ export const useDataStatus = () =>
     queryFn: () => api<{ jobs: Record<string, string | null> }>("/status"),
     staleTime: 10 * 60_000,
   });
+
+/** Segue de uma vez os parlamentares em exercício de uma UF (opcionalmente só de uma casa). */
+export function useBulkFollow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { uf: string; house?: House }) =>
+      api<BulkFollowResult>("/me/follows/bulk", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      for (const key of ["follows", "feed", "news", "politician"]) {
+        qc.invalidateQueries({ queryKey: [key] });
+      }
+    },
+  });
+}
 
 export function useFollowMutation() {
   const qc = useQueryClient();

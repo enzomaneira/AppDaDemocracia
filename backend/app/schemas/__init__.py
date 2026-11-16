@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -211,6 +211,18 @@ class FollowPrefs(BaseModel):
 class FollowOut(FollowPrefs):
     politician: PoliticianSummary
     created_at: datetime
+
+
+class BulkFollowIn(BaseModel):
+    """Seguir de uma vez os parlamentares em exercício de uma UF (e, se informado, de uma casa)."""
+
+    uf: str = Field(min_length=2, max_length=2)
+    house: Literal["camara", "senado"] | None = None
+
+
+class BulkFollowOut(BaseModel):
+    followed: int  # quantos passaram a ser seguidos agora
+    total: int  # quantos parlamentares em exercício existem no recorte
 
 
 class FeedItem(BaseModel):

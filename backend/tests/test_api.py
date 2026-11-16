@@ -133,6 +133,59 @@ async def test_follow_feed_and_vote_detail(client, seed):
     assert (await client.get("/api/v1/me/follows", headers=h)).json() == []
 
 
+async def test_follow_bulk_by_uf(client, db, seed):
+    from app.models import House, Politician
+
+    db.add_all(
+        [
+            Politician(
+                house=House.senado,
+                external_id="10",
+                civil_name="Davi Rocha",
+                parliamentary_name="Davi Rocha",
+                slug="davi-rocha-sp",
+                uf="SP",
+            ),
+            Politician(
+                house=House.camara,
+                external_id="11",
+                civil_name="Eva Pinto",
+                parliamentary_name="Eva Pinto",
+                slug="eva-pinto-sp",
+                uf="SP",
+                in_office=False,
+            ),
+        ]
+    )
+    await db.commit()
+    h = auth(await register(client))
+    # Quem já era seguido mantém as próprias preferências.
+    await client.put(f"/api/v1/me/follows/{seed['a'].id}", headers=h, json={"notify_news": False})
+
+    r = await client.post("/api/v1/me/follows/bulk", headers=h, json={"uf": "sp"})
+    assert r.status_code == 200
+    assert r.json() == {"followed": 1, "total": 2}  # fora do exercício não entra
+    follows = (await client.get("/api/v1/me/follows", headers=h)).json()
+    assert [f["politician"]["slug"] for f in follows] == ["ana-souza-sp", "davi-rocha-sp"]
+    assert follows[0]["notify_news"] is False
+    assert follows[1]["notify_votes"] is True  # senador seguido em lote mantém os avisos
+
+    # Deputados seguidos em lote entram sem avisos.
+    await client.delete(f"/api/v1/me/follows/{seed['a'].id}", headers=h)
+    await client.post("/api/v1/me/follows/bulk", headers=h, json={"uf": "SP", "house": "camara"})
+    ana = (await client.get("/api/v1/me/follows", headers=h)).json()[0]
+    assert (ana["notify_votes"], ana["notify_agenda"], ana["notify_news"]) == (False, False, False)
+
+    again = await client.post("/api/v1/me/follows/bulk", headers=h, json={"uf": "SP"})
+    assert again.json() == {"followed": 0, "total": 2}
+
+    only = await client.post(
+        "/api/v1/me/follows/bulk", headers=h, json={"uf": "MG", "house": "camara"}
+    )
+    assert only.json() == {"followed": 0, "total": 0}
+    assert (await client.post("/api/v1/me/follows/bulk", json={"uf": "SP"})).status_code == 401
+
+
 async def test_follow_list_is_private(client, seed):
     assert (await client.get("/api/v1/me/follows")).status_code == 401
     assert (await client.get("/api/v1/me/feed")).status_code == 401
